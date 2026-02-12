@@ -319,21 +319,31 @@
         /* Multi Results */
         .multi-results {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
             margin-top: 25px;
         }
 
         .result-box {
-            padding: 20px;
+            padding: 15px 10px;
             background: rgba(0, 0, 0, 0.25);
-            border-radius: 16px;
+            border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.05);
             text-align: center;
         }
 
+        .result-box .result-label {
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+        }
+
         .result-box .result-value {
-            font-size: 1.8rem;
+            font-size: 1.4rem;
+        }
+
+        .result-box .result-detail {
+            font-size: 0.7rem;
+            margin-top: 5px;
         }
 
         /* Footer */
@@ -408,14 +418,60 @@
             background: rgba(255, 255, 255, 0.05);
         }
 
-        /* Responsive */
+        /* Responsive - Tablet */
+        @media (max-width: 768px) {
+            .multi-results {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+            }
+
+            .result-box .result-value {
+                font-size: 1.2rem;
+            }
+
+            .reference-table th,
+            .reference-table td {
+                padding: 10px 8px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Responsive - Mobile */
         @media (max-width: 600px) {
+            .container {
+                padding: 20px 15px;
+            }
+
             h1 {
-                font-size: 1.8rem;
+                font-size: 1.6rem;
+            }
+
+            .logo-icon {
+                width: 50px;
+                height: 50px;
+            }
+
+            .logo-icon .material-symbols-outlined {
+                font-size: 26px;
             }
 
             .card {
-                padding: 25px;
+                padding: 20px 15px;
+                border-radius: 16px;
+            }
+
+            .card-header {
+                gap: 12px;
+                margin-bottom: 20px;
+            }
+
+            .card-icon {
+                width: 42px;
+                height: 42px;
+            }
+
+            .card-title {
+                font-size: 1.1rem;
             }
 
             .input-group {
@@ -423,13 +479,75 @@
                 align-items: stretch;
             }
 
+            .input-field input {
+                padding: 14px 16px;
+                font-size: 1.2rem;
+            }
+
             .separator {
                 text-align: center;
                 padding: 5px 0;
             }
 
-            .result-value {
-                font-size: 2rem;
+            .multi-results {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .result-box {
+                padding: 12px 8px;
+                border-radius: 10px;
+            }
+
+            .result-box .result-label {
+                font-size: 0.7rem;
+            }
+
+            .result-box .result-value {
+                font-size: 1.1rem;
+            }
+
+            .result-box .result-detail {
+                font-size: 0.65rem;
+            }
+
+            .result-area .result-value {
+                font-size: 1.8rem;
+            }
+
+            .reference-toggle {
+                width: 100%;
+                padding: 12px 15px;
+            }
+
+            .reference-table th,
+            .reference-table td {
+                padding: 8px 5px;
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Responsive - Small Mobile */
+        @media (max-width: 400px) {
+            h1 {
+                font-size: 1.4rem;
+            }
+
+            .subtitle {
+                font-size: 0.8rem;
+            }
+
+            .multi-results {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+
+            .result-box {
+                padding: 10px 6px;
+            }
+
+            .result-box .result-value {
+                font-size: 1rem;
             }
         }
     </style>
@@ -470,7 +588,44 @@
 
             <div class="multi-results">
                 <div class="result-box">
-                    <div class="result-label">フルマラソンタイム</div>
+                    <div class="result-label">5km</div>
+                    <div class="result-value" id="5km-result">--:--</div>
+                </div>
+                <div class="result-box">
+                    <div class="result-label">10km</div>
+                    <div class="result-value" id="10km-result">--:--</div>
+                </div>
+                <div class="result-box">
+                    <div class="result-label">15km</div>
+                    <div class="result-value" id="15km-result">--:--</div>
+                </div>
+                <div class="result-box">
+                    <div class="result-label">20km</div>
+                    <div class="result-value" id="20km-result">--:--</div>
+                </div>
+                <div class="result-box">
+                    <div class="result-label">ハーフ</div>
+                    <div class="result-value" id="half-result">--:--:--</div>
+                    <div class="result-detail">21.0975km</div>
+                </div>
+                <div class="result-box">
+                    <div class="result-label">25km</div>
+                    <div class="result-value" id="25km-result">--:--</div>
+                </div>
+                <div class="result-box">
+                    <div class="result-label">30km</div>
+                    <div class="result-value" id="30km-result">--:--</div>
+                </div>
+                <div class="result-box">
+                    <div class="result-label">35km</div>
+                    <div class="result-value" id="35km-result">--:--</div>
+                </div>
+                <div class="result-box">
+                    <div class="result-label">40km</div>
+                    <div class="result-value" id="40km-result">--:--</div>
+                </div>
+                <div class="result-box">
+                    <div class="result-label">フルマラソン</div>
                     <div class="result-value" id="marathon-result">--:--:--</div>
                     <div class="result-detail">42.195km</div>
                 </div>
@@ -574,6 +729,7 @@
 
     <script>
         const MARATHON_DISTANCE = 42.195; // km
+        const HALF_MARATHON_DISTANCE = 21.0975; // km
         const TRACK_DISTANCE = 0.4; // km (400m)
 
         // 秒を時:分:秒に変換
@@ -612,6 +768,24 @@
             }
         }
 
+        // 秒を分:秒または時:分:秒に変換（自動判定）
+        function secondsToTimeAuto(totalSeconds) {
+            if (isNaN(totalSeconds) || totalSeconds <= 0) return '--:--';
+
+            if (totalSeconds >= 3600) {
+                // 1時間以上は時:分:秒形式
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = Math.round(totalSeconds % 60);
+                return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            } else {
+                // 1時間未満は分:秒形式
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = Math.round(totalSeconds % 60);
+                return `${minutes}:${String(seconds).padStart(2, '0')}`;
+            }
+        }
+
         // Card 1: 1kmペースからの換算
         function calculateFromPace() {
             const min = parseFloat(document.getElementById('pace-min').value) || 0;
@@ -619,10 +793,33 @@
             const paceInSeconds = min * 60 + sec;
 
             if (paceInSeconds <= 0) {
+                document.getElementById('5km-result').textContent = '--:--';
+                document.getElementById('10km-result').textContent = '--:--';
+                document.getElementById('15km-result').textContent = '--:--';
+                document.getElementById('20km-result').textContent = '--:--';
+                document.getElementById('half-result').textContent = '--:--:--';
+                document.getElementById('25km-result').textContent = '--:--';
+                document.getElementById('30km-result').textContent = '--:--';
+                document.getElementById('35km-result').textContent = '--:--';
+                document.getElementById('40km-result').textContent = '--:--';
                 document.getElementById('marathon-result').textContent = '--:--:--';
                 document.getElementById('track-result').textContent = '--秒';
                 return;
             }
+
+            // 5kmごとのタイム
+            document.getElementById('5km-result').textContent = secondsToTimeAuto(paceInSeconds * 5);
+            document.getElementById('10km-result').textContent = secondsToTimeAuto(paceInSeconds * 10);
+            document.getElementById('15km-result').textContent = secondsToTimeAuto(paceInSeconds * 15);
+            document.getElementById('20km-result').textContent = secondsToTimeAuto(paceInSeconds * 20);
+            document.getElementById('25km-result').textContent = secondsToTimeAuto(paceInSeconds * 25);
+            document.getElementById('30km-result').textContent = secondsToTimeAuto(paceInSeconds * 30);
+            document.getElementById('35km-result').textContent = secondsToTimeAuto(paceInSeconds * 35);
+            document.getElementById('40km-result').textContent = secondsToTimeAuto(paceInSeconds * 40);
+
+            // ハーフマラソンタイム
+            const halfSeconds = paceInSeconds * HALF_MARATHON_DISTANCE;
+            document.getElementById('half-result').textContent = secondsToHMS(halfSeconds);
 
             // フルマラソンタイム
             const marathonSeconds = paceInSeconds * MARATHON_DISTANCE;

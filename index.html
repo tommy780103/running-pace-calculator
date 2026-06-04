@@ -673,19 +673,22 @@
         <header>
             <div class="logo">
                 <div class="logo-icon">
-                    <span class="material-symbols-rounded">directions_run</span>
+                    <span class="material-symbols-rounded">sprint</span>
                 </div>
                 <div class="logo-text">
-                    <h1>PACE CALCULATOR</h1>
+                    <h1>Pace Calculator</h1>
                     <p class="subtitle">ランニング時間換算ツール</p>
                 </div>
             </div>
+            <button class="theme-toggle" id="theme-toggle" type="button" aria-label="ライト/ダーク切り替え">
+                <span class="material-symbols-rounded" id="theme-icon">dark_mode</span>
+            </button>
         </header>
 
         <!-- Tab Navigation -->
         <nav class="tab-nav" role="tablist" aria-label="機能切り替え">
             <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="card-convert" data-tab="card-convert">
-                <span class="material-symbols-rounded">pace</span>
+                <span class="material-symbols-rounded">swap_horiz</span>
                 <span>換算</span>
             </button>
             <button class="tab-btn" role="tab" aria-selected="false" aria-controls="card-predict" data-tab="card-predict">
@@ -693,15 +696,15 @@
                 <span>予測</span>
             </button>
             <button class="tab-btn" role="tab" aria-selected="false" aria-controls="card-training" data-tab="card-training">
-                <span class="material-symbols-rounded">fitness_center</span>
+                <span class="material-symbols-rounded">exercise</span>
                 <span>練習</span>
             </button>
             <button class="tab-btn" role="tab" aria-selected="false" aria-controls="card-splits" data-tab="card-splits">
                 <span class="material-symbols-rounded">timer</span>
-                <span>スプリット</span>
+                <span>ラップ</span>
             </button>
             <button class="tab-btn" role="tab" aria-selected="false" aria-controls="card-course" data-tab="card-course">
-                <span class="material-symbols-rounded">map</span>
+                <span class="material-symbols-rounded">route</span>
                 <span>コース</span>
             </button>
         </nav>

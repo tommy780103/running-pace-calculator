@@ -4,187 +4,209 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ランニング時間換算ツール</title>
+    <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <!-- Leaflet (地図) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
+        /* ===== Theme tokens (Apple-style) ===== */
         :root {
-            --primary: #FF6B35;
-            --primary-dark: #E85A2A;
-            --secondary: #2EC4B6;
-            --dark: #1A1A2E;
-            --darker: #0F0F1A;
-            --light: #F8FAFC;
-            --accent: #FFD166;
-            --green: #22C55E;
-            --gradient-start: #FF6B35;
-            --gradient-end: #FF9F1C;
-            --card-bg: rgba(30, 30, 50, 0.9);
-            --card-border: rgba(255, 255, 255, 0.08);
-            --input-bg: rgba(0, 0, 0, 0.3);
-            --input-border: rgba(255, 255, 255, 0.12);
-            --text-muted: rgba(255, 255, 255, 0.45);
-            --text-dim: rgba(255, 255, 255, 0.6);
+            --accent: #0071e3;
+            --accent-hover: #0077ed;
+            --accent-soft: rgba(0, 113, 227, 0.1);
+            --radius: 18px;
+            --radius-sm: 12px;
+            --ease: cubic-bezier(0.4, 0, 0.2, 1);
+            /* zone / course palette (theme-independent) */
+            --c-green: #34c759;
+            --c-blue: #0a84ff;
+            --c-orange: #ff9500;
+            --c-red: #ff3b30;
+            --c-purple: #af52de;
+            --c-teal: #30b0c7;
+            --c-yellow: #ffcc00;
+        }
+        :root[data-theme="light"] {
+            --bg: #f5f5f7;
+            --bg-elev: #ffffff;
+            --surface: #ffffff;
+            --surface-2: #f0f0f3;
+            --inset: #f5f5f7;
+            --text: #1d1d1f;
+            --text-secondary: #424245;
+            --text-tertiary: #86868b;
+            --border: rgba(0, 0, 0, 0.1);
+            --border-soft: rgba(0, 0, 0, 0.06);
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --nav-bg: rgba(245, 245, 247, 0.8);
+            --tab-track: #e8e8ed;
+            --tab-active: #ffffff;
+        }
+        :root[data-theme="dark"] {
+            --bg: #000000;
+            --bg-elev: #1c1c1e;
+            --surface: #1c1c1e;
+            --surface-2: #2c2c2e;
+            --inset: #2c2c2e;
+            --text: #f5f5f7;
+            --text-secondary: #ebebf0;
+            --text-tertiary: #8e8e93;
+            --border: rgba(255, 255, 255, 0.12);
+            --border-soft: rgba(255, 255, 255, 0.08);
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+            --nav-bg: rgba(0, 0, 0, 0.7);
+            --tab-track: #1c1c1e;
+            --tab-active: #3a3a3c;
+            --accent: #2997ff;
+            --accent-hover: #47a6ff;
+            --accent-soft: rgba(41, 151, 255, 0.15);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Barlow', sans-serif;
-            background: var(--darker);
+            font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
             min-height: 100vh;
             min-height: 100dvh;
-            color: var(--light);
+            color: var(--text);
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            transition: background 0.3s var(--ease), color 0.3s var(--ease);
         }
 
-        /* Background Pattern */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background:
-                radial-gradient(ellipse at 20% 20%, rgba(255, 107, 53, 0.12) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 80%, rgba(46, 196, 182, 0.08) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: -1;
+        /* Tabular numbers everywhere figures matter */
+        .num, .result-value, .input-field input, .input-select,
+        .zone-pace, .splits-table td, .reference-table td, .vdot-display .result-value {
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum" 1;
         }
 
         .container {
-            max-width: 640px;
+            max-width: 660px;
             margin: 0 auto;
-            padding: 24px 16px 100px;
+            padding: 20px 18px 80px;
         }
 
-        /* Header */
+        /* ===== Header ===== */
         header {
-            text-align: center;
-            margin-bottom: 24px;
-            padding: 16px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 22px;
+            padding: 12px 2px;
         }
-
         .logo {
             display: flex;
             align-items: center;
-            justify-content: center;
             gap: 12px;
         }
-
         .logo-icon {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-            border-radius: 14px;
+            width: 42px;
+            height: 42px;
+            background: var(--accent);
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 8px 24px rgba(255, 107, 53, 0.3);
             flex-shrink: 0;
         }
-
-        .logo-icon .material-symbols-outlined {
-            font-size: 28px;
-            color: white;
-        }
-
+        .logo-icon .material-symbols-rounded { font-size: 26px; color: #fff; }
         .logo-text h1 {
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 1.8rem;
+            font-size: 1.3rem;
             font-weight: 700;
-            letter-spacing: 2px;
-            color: var(--light);
-            line-height: 1;
+            letter-spacing: -0.02em;
+            color: var(--text);
+            line-height: 1.1;
         }
-
         .subtitle {
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            margin-top: 4px;
-            letter-spacing: 0.5px;
+            color: var(--text-tertiary);
+            font-size: 0.78rem;
+            margin-top: 1px;
+            font-weight: 500;
         }
+        .theme-toggle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s var(--ease);
+            box-shadow: var(--shadow-sm);
+        }
+        .theme-toggle:hover { color: var(--accent); transform: scale(1.05); }
+        .theme-toggle:active { transform: scale(0.95); }
+        .theme-toggle .material-symbols-rounded { font-size: 22px; }
 
-        /* Tab Navigation */
+        /* ===== Tabs (segmented control) ===== */
         .tab-nav {
             display: flex;
-            gap: 4px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 16px;
+            gap: 2px;
+            background: var(--tab-track);
+            border-radius: 14px;
             padding: 4px;
-            margin-bottom: 20px;
+            margin-bottom: 22px;
             position: sticky;
             top: 8px;
             z-index: 100;
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--card-border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
         }
-
         .tab-btn {
             flex: 1;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            padding: 12px 8px;
+            gap: 3px;
+            padding: 9px 4px;
             border: none;
             background: transparent;
-            color: var(--text-muted);
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 0.85rem;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            border-radius: 12px;
+            color: var(--text-tertiary);
+            font-family: inherit;
+            font-size: 0.7rem;
+            font-weight: 600;
+            border-radius: 10px;
             cursor: pointer;
-            transition: all 0.25s ease;
+            transition: all 0.25s var(--ease);
             white-space: nowrap;
         }
-
-        .tab-btn .material-symbols-outlined {
-            font-size: 20px;
-        }
-
-        .tab-btn:hover {
-            color: var(--light);
-            background: rgba(255, 255, 255, 0.06);
-        }
-
-        .tab-btn:focus-visible {
-            outline: 2px solid var(--primary);
-            outline-offset: -2px;
-        }
-
+        .tab-btn .material-symbols-rounded { font-size: 21px; }
+        .tab-btn:hover { color: var(--text-secondary); }
+        .tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
         .tab-btn.active {
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.35);
+            background: var(--tab-active);
+            color: var(--accent);
+            box-shadow: var(--shadow-sm);
         }
 
-        /* Cards */
+        /* ===== Cards ===== */
         .card {
-            background: linear-gradient(145deg, var(--card-bg), rgba(20, 20, 35, 0.95));
-            border-radius: 20px;
-            padding: 24px;
-            border: 1px solid var(--card-border);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 26px;
+            border: 1px solid var(--border-soft);
+            box-shadow: var(--shadow);
             display: none;
         }
-
-        .card.active {
-            display: block;
-            animation: fadeIn 0.3s ease-out;
-        }
-
+        .card.active { display: block; animation: fadeIn 0.35s var(--ease); }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
+            from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -192,491 +214,458 @@
             display: flex;
             align-items: center;
             gap: 14px;
-            margin-bottom: 24px;
+            margin-bottom: 26px;
         }
-
         .card-icon {
-            width: 44px;
-            height: 44px;
+            width: 42px;
+            height: 42px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
         }
+        .card-icon .material-symbols-rounded { font-size: 23px; color: #fff; }
+        .card-icon.orange { background: var(--c-orange); }
+        .card-icon.teal { background: var(--c-teal); }
+        .card-icon.yellow { background: var(--c-yellow); }
+        .card-icon.green { background: var(--c-green); }
+        .card-icon.purple { background: var(--c-purple); }
+        .card-icon.blue { background: var(--accent); }
 
-        .card-icon .material-symbols-outlined {
-            font-size: 24px;
-            color: white;
+        .card-title { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.02em; }
+        .card-subtitle { font-size: 0.82rem; color: var(--text-tertiary); margin-top: 2px; }
+
+        /* ===== Sub-section ===== */
+        .sub-section {
+            margin-top: 30px;
+            padding-top: 26px;
+            border-top: 1px solid var(--border-soft);
         }
-
-        .card-icon.orange { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
-        .card-icon.teal { background: linear-gradient(135deg, var(--secondary), #1FA89D); }
-        .card-icon.yellow { background: linear-gradient(135deg, var(--accent), #E5B85A); }
-
-        .card-title {
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 1.2rem;
+        .sub-section:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+        .sub-title {
+            font-size: 1.02rem;
             font-weight: 600;
-            letter-spacing: 0.5px;
+            letter-spacing: -0.01em;
+            color: var(--text);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
+        .sub-title .material-symbols-rounded { font-size: 20px; color: var(--accent); }
+        .sub-desc { font-size: 0.8rem; color: var(--text-tertiary); margin-bottom: 16px; }
 
-        .card-subtitle {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
-
-        /* Input Group */
+        /* ===== Input group ===== */
         .input-group {
             display: flex;
             align-items: center;
-            gap: 0;
-            background: var(--input-bg);
-            border: 2px solid var(--input-border);
+            background: var(--inset);
+            border: 1.5px solid transparent;
             border-radius: 14px;
-            padding: 4px;
-            transition: border-color 0.25s ease, box-shadow 0.25s ease;
+            padding: 6px;
+            transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
         }
-
         .input-group:focus-within {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.15);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-soft);
         }
-
-        .input-field {
-            flex: 1;
-            text-align: center;
-        }
-
+        .input-field { flex: 1; text-align: center; }
         .input-field label {
             display: block;
-            font-size: 0.65rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-size: 0.66rem;
+            color: var(--text-tertiary);
+            letter-spacing: 0.02em;
             padding: 4px 0 0;
-            font-weight: 500;
+            font-weight: 600;
         }
-
         .input-field input {
             width: 100%;
-            padding: 6px 8px 10px;
+            padding: 4px 8px 8px;
             background: transparent;
             border: none;
-            color: var(--light);
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 1.6rem;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 1.7rem;
             font-weight: 600;
-            letter-spacing: 2px;
+            letter-spacing: 0.01em;
             text-align: center;
         }
-
-        .input-field input:focus {
-            outline: none;
-        }
-
-        .input-field input::placeholder {
-            color: rgba(255, 255, 255, 0.15);
-        }
-
-        /* Remove spinner arrows */
+        .input-field input:focus { outline: none; }
+        .input-field input::placeholder { color: var(--text-tertiary); opacity: 0.4; }
         .input-field input[type="number"]::-webkit-outer-spin-button,
-        .input-field input[type="number"]::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        .input-field input[type="number"] {
-            -moz-appearance: textfield;
-        }
+        .input-field input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .input-field input[type="number"] { -moz-appearance: textfield; }
 
         .separator {
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 1.6rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.25);
-            padding: 12px 2px 0;
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--text-tertiary);
+            opacity: 0.5;
+            padding: 10px 2px 0;
             user-select: none;
         }
 
-        /* Section label */
-        .section-label {
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 0.75rem;
+        /* ===== Distance presets ===== */
+        .distance-presets { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+        .preset-btn {
+            flex: 1 1 auto;
+            min-width: 56px;
+            padding: 9px 10px;
+            background: var(--inset);
+            border: 1.5px solid transparent;
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.18s var(--ease);
+        }
+        .preset-btn:hover { background: var(--surface-2); }
+        .preset-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .preset-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+        /* ===== Select / labeled ===== */
+        .field-label {
+            font-size: 0.74rem;
+            color: var(--text-tertiary);
+            letter-spacing: 0.01em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .input-select {
+            width: 100%;
+            padding: 13px 14px;
+            background: var(--inset);
+            border: 1.5px solid transparent;
+            border-radius: 14px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 1rem;
             font-weight: 500;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-top: 28px;
-            margin-bottom: 12px;
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+        }
+        .input-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+        .input-select option { background: var(--bg-elev); color: var(--text); }
+        input.input-select { background-image: none; }
+        .custom-distance-wrap { margin-top: 10px; }
+
+        /* ===== Section label ===== */
+        .section-label {
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            letter-spacing: 0.01em;
+            margin: 28px 0 14px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
+        .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border-soft); }
 
-        .section-label::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        /* Results Grid */
-        .multi-results {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-        }
-
+        /* ===== Results grid ===== */
+        .multi-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
         .result-box {
-            padding: 14px 8px 12px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 16px 8px 14px;
+            background: var(--inset);
+            border-radius: var(--radius-sm);
             text-align: center;
-            transition: background 0.2s ease;
+            transition: background 0.2s var(--ease);
         }
-
         .result-box .result-label {
-            font-size: 0.65rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-size: 0.68rem;
+            color: var(--text-tertiary);
+            letter-spacing: 0.01em;
             margin-bottom: 6px;
-            font-weight: 500;
-        }
-
-        .result-box .result-value {
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 1.25rem;
             font-weight: 600;
-            letter-spacing: 1px;
-            color: var(--light);
-            transition: color 0.3s ease;
         }
-
-        .result-box .result-detail {
-            font-size: 0.6rem;
-            color: rgba(255, 255, 255, 0.3);
-            margin-top: 4px;
+        .result-box .result-value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: var(--text);
+            transition: color 0.3s var(--ease);
         }
+        .result-box .result-detail { font-size: 0.62rem; color: var(--text-tertiary); margin-top: 4px; }
+        .result-box.highlight { background: var(--accent-soft); }
+        .result-box.highlight .result-value { color: var(--accent); }
+        .result-box.highlight .result-label { color: var(--accent); }
 
-        /* Highlighted result boxes (half, full marathon) */
-        .result-box.highlight {
-            background: rgba(255, 107, 53, 0.1);
-            border: 1px solid rgba(255, 107, 53, 0.25);
-        }
-
-        .result-box.highlight .result-value {
-            color: var(--accent);
-            text-shadow: 0 0 20px rgba(255, 209, 102, 0.2);
-        }
-
-        .result-box.highlight .result-label {
-            color: var(--primary);
-        }
-
-        /* Single Result Area (Card 2) */
+        /* ===== Single result area ===== */
         .result-area {
             margin-top: 24px;
-            padding: 24px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 16px;
-            border: 1px solid rgba(255, 107, 53, 0.2);
+            padding: 26px;
+            background: var(--inset);
+            border-radius: var(--radius);
             text-align: center;
         }
-
         .result-area .result-label {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
+            font-size: 0.78rem;
+            color: var(--text-tertiary);
+            letter-spacing: 0.01em;
             margin-bottom: 8px;
-            font-weight: 500;
+            font-weight: 600;
         }
-
         .result-area .result-value {
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 2.8rem;
+            font-size: 2.9rem;
             font-weight: 700;
-            letter-spacing: 3px;
+            letter-spacing: -0.02em;
             color: var(--accent);
-            text-shadow: 0 0 30px rgba(255, 209, 102, 0.2);
         }
+        .result-area .result-detail { font-size: 0.85rem; color: var(--text-tertiary); margin-top: 8px; }
 
-        .result-area .result-detail {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-top: 8px;
+        /* ===== Dual results ===== */
+        .dual-results { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 24px; }
+        .dual-results .result-box { padding: 22px 12px; }
+        .dual-results .result-box .result-value { font-size: 1.7rem; }
+        .dual-results .result-box .result-label { font-size: 0.72rem; }
+
+        /* ===== Training zones ===== */
+        .training-zones { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; }
+        .zone-row {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 14px 16px;
+            background: var(--inset);
+            border-radius: var(--radius-sm);
         }
-
-        /* Card 3 two-column results */
-        .dual-results {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-top: 24px;
+        .zone-badge {
+            width: 38px;
+            height: 38px;
+            border-radius: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #fff;
+            background: var(--zone-color, var(--accent));
+            flex-shrink: 0;
         }
-
-        .dual-results .result-box {
-            padding: 20px 12px;
+        .zone-info { flex: 1; min-width: 0; }
+        .zone-name { font-weight: 600; font-size: 0.95rem; letter-spacing: -0.01em; }
+        .zone-desc { font-size: 0.74rem; color: var(--text-tertiary); margin-top: 2px; }
+        .zone-pace {
+            font-weight: 700;
+            font-size: 1.2rem;
+            letter-spacing: -0.01em;
+            color: var(--zone-color, var(--accent));
+            text-align: right;
+            white-space: nowrap;
         }
-
-        .dual-results .result-box .result-value {
-            font-size: 1.6rem;
+        .vdot-display {
+            margin-top: 22px;
+            text-align: center;
+            padding: 20px;
+            background: var(--inset);
+            border-radius: var(--radius);
         }
-
-        .dual-results .result-box .result-label {
-            font-size: 0.7rem;
+        .vdot-display .result-label {
+            font-size: 0.74rem;
+            color: var(--text-tertiary);
+            letter-spacing: 0.01em;
+            font-weight: 600;
         }
+        .vdot-display .result-value { font-size: 2.3rem; font-weight: 700; color: var(--c-purple); letter-spacing: -0.02em; }
 
-        /* Reference Table */
-        .reference-section {
-            margin-top: 24px;
+        /* ===== Tables (splits / reference) ===== */
+        .splits-wrap {
+            margin-top: 20px;
+            max-height: 360px;
+            overflow-y: auto;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-soft);
         }
+        .splits-table, .reference-table table { width: 100%; border-collapse: collapse; }
+        .splits-table th, .splits-table td,
+        .reference-table th, .reference-table td {
+            padding: 11px 12px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-soft);
+        }
+        .splits-table th, .reference-table th {
+            background: var(--surface-2);
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            color: var(--text-secondary);
+            position: sticky;
+            top: 0;
+        }
+        .splits-table td, .reference-table td {
+            font-size: 0.98rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        .splits-table tr:last-child td, .reference-table tr:last-child td { border-bottom: none; }
+        .splits-table tr.milestone td { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+        .reference-table tr:hover td { background: var(--surface-2); }
+        .reference-table tr.active-pace td { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 
+        /* ===== Buttons ===== */
+        .btn-row { display: flex; gap: 8px; margin-top: 14px; }
+        .action-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: var(--inset);
+            border: 1px solid transparent;
+            color: var(--text);
+            padding: 13px 16px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.88rem;
+            font-weight: 600;
+            transition: all 0.2s var(--ease);
+        }
+        .action-btn:hover { background: var(--surface-2); color: var(--accent); }
+        .action-btn:active { transform: scale(0.98); }
+        .action-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .action-btn .material-symbols-rounded { font-size: 19px; }
+
+        /* ===== Reference toggle ===== */
+        .reference-section { margin-top: 24px; }
         .reference-toggle {
             width: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-dim);
-            padding: 12px 20px;
-            border-radius: 12px;
+            background: var(--inset);
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            padding: 13px 20px;
+            border-radius: var(--radius-sm);
             cursor: pointer;
-            font-family: 'Barlow', sans-serif;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: all 0.25s ease;
+            font-family: inherit;
+            font-size: 0.88rem;
+            font-weight: 600;
+            transition: all 0.2s var(--ease);
         }
-
-        .reference-toggle:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-            background: rgba(255, 107, 53, 0.06);
-        }
-
-        .reference-toggle:focus-visible {
-            outline: 2px solid var(--primary);
-            outline-offset: 2px;
-        }
-
-        .reference-toggle .material-symbols-outlined {
-            font-size: 18px;
-            transition: transform 0.3s ease;
-        }
-
-        .reference-toggle.open .material-symbols-outlined {
-            transform: rotate(180deg);
-        }
-
+        .reference-toggle:hover { background: var(--surface-2); color: var(--accent); }
+        .reference-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .reference-toggle .material-symbols-rounded { font-size: 19px; transition: transform 0.3s var(--ease); }
+        .reference-toggle.open .material-symbols-rounded { transform: rotate(180deg); }
         .reference-table-wrap {
             display: grid;
             grid-template-rows: 0fr;
-            transition: grid-template-rows 0.35s ease;
-            margin-top: 0;
+            transition: grid-template-rows 0.35s var(--ease);
         }
-
-        .reference-table-wrap.show {
-            grid-template-rows: 1fr;
-            margin-top: 12px;
-        }
-
-        .reference-table-inner {
+        .reference-table-wrap.show { grid-template-rows: 1fr; margin-top: 12px; }
+        .reference-table-inner { overflow: hidden; }
+        .reference-table {
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-soft);
             overflow: hidden;
         }
 
-        .reference-table table {
+        /* ===== Course / Map ===== */
+        .course-controls { display: flex; flex-direction: column; gap: 12px; }
+        .course-row { display: flex; gap: 10px; align-items: flex-end; }
+        .course-row > div { flex: 1; }
+        #map {
             width: 100%;
-            border-collapse: collapse;
+            height: 340px;
+            border-radius: var(--radius);
+            margin-top: 16px;
+            border: 1px solid var(--border-soft);
+            background: var(--surface-2);
+            z-index: 1;
         }
-
-        .reference-table th,
-        .reference-table td {
-            padding: 10px 12px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        .leaflet-container { background: var(--surface-2); font-family: inherit; }
+        .map-hint {
+            font-size: 0.78rem;
+            color: var(--text-tertiary);
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
-
-        .reference-table th {
-            background: rgba(255, 107, 53, 0.15);
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-dim);
-            position: sticky;
-            top: 0;
+        .map-hint .material-symbols-rounded { font-size: 17px; }
+        .course-options { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+        .course-card {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 13px 14px;
+            background: var(--inset);
+            border-radius: var(--radius-sm);
+            border: 1.5px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s var(--ease);
         }
+        .course-card:hover { background: var(--surface-2); }
+        .course-card.active { border-color: var(--course-color, var(--accent)); }
+        .course-swatch { width: 14px; height: 14px; border-radius: 4px; background: var(--course-color, var(--accent)); flex-shrink: 0; }
+        .course-meta { flex: 1; min-width: 0; }
+        .course-name { font-weight: 600; font-size: 0.95rem; letter-spacing: -0.01em; }
+        .course-dist { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 1px; }
+        .course-toggle-icon { color: var(--text-tertiary); font-size: 21px; }
+        .course-card.active .course-toggle-icon { color: var(--course-color, var(--accent)); }
 
-        .reference-table td {
-            font-family: 'Barlow Condensed', sans-serif;
-            font-size: 1rem;
-            font-weight: 500;
-            letter-spacing: 1px;
-            color: rgba(255, 255, 255, 0.7);
+        .privacy-note {
+            margin-top: 18px;
+            padding: 14px 16px;
+            background: rgba(52, 199, 89, 0.1);
+            border-radius: var(--radius-sm);
+            font-size: 0.76rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+            display: flex;
+            gap: 10px;
         }
+        .privacy-note .material-symbols-rounded { font-size: 19px; color: var(--c-green); flex-shrink: 0; }
 
-        .reference-table tr:hover td {
-            background: rgba(255, 255, 255, 0.04);
-        }
+        .empty-hint { text-align: center; color: var(--text-tertiary); font-size: 0.85rem; padding: 22px; }
 
-        .reference-table tr.active-pace td {
-            background: rgba(255, 107, 53, 0.12);
-            color: var(--accent);
-            font-weight: 600;
-        }
+        /* ===== Footer ===== */
+        footer { text-align: center; padding: 32px 20px; color: var(--text-tertiary); font-size: 0.78rem; line-height: 1.7; }
+        footer a { color: var(--accent); text-decoration: none; font-weight: 500; }
+        footer a:hover { text-decoration: underline; }
 
-        /* Footer */
-        footer {
-            text-align: center;
-            padding: 32px 20px;
-            color: rgba(255, 255, 255, 0.2);
-            font-size: 0.8rem;
-        }
-
-        /* Responsive - Mobile */
+        /* ===== Responsive ===== */
         @media (max-width: 600px) {
-            .container {
-                padding: 16px 12px 100px;
-            }
-
-            .logo-text h1 {
-                font-size: 1.5rem;
-            }
-
-            .tab-btn {
-                padding: 10px 6px;
-                font-size: 0.78rem;
-            }
-
-            .tab-btn .material-symbols-outlined {
-                font-size: 18px;
-            }
-
-            .tab-btn .tab-label {
-                display: none;
-            }
-
-            .tab-btn .tab-label-short {
-                display: inline;
-            }
-
-            .card {
-                padding: 20px 14px;
-                border-radius: 16px;
-            }
-
-            .card-header {
-                gap: 10px;
-                margin-bottom: 20px;
-            }
-
-            .card-icon {
-                width: 38px;
-                height: 38px;
-            }
-
-            .card-icon .material-symbols-outlined {
-                font-size: 20px;
-            }
-
-            .card-title {
-                font-size: 1.05rem;
-            }
-
-            .multi-results {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 6px;
-            }
-
-            .result-box {
-                padding: 12px 6px 10px;
-            }
-
-            .result-box .result-value {
-                font-size: 1.1rem;
-            }
-
-            .result-box .result-label {
-                font-size: 0.6rem;
-            }
-
-            .result-area .result-value {
-                font-size: 2.2rem;
-            }
-
-            .dual-results .result-box .result-value {
-                font-size: 1.3rem;
-            }
-
-            .reference-table th,
-            .reference-table td {
-                padding: 8px 6px;
-                font-size: 0.85rem;
-            }
+            .container { padding: 16px 14px 80px; }
+            .logo-text h1 { font-size: 1.2rem; }
+            .tab-btn { padding: 8px 2px; font-size: 0.64rem; }
+            .tab-btn .material-symbols-rounded { font-size: 20px; }
+            .card { padding: 20px 16px; border-radius: 16px; }
+            .card-header { gap: 11px; margin-bottom: 20px; }
+            .card-icon { width: 38px; height: 38px; }
+            .card-title { font-size: 1.08rem; }
+            .multi-results { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .result-box { padding: 13px 6px 11px; }
+            .result-box .result-value { font-size: 1.15rem; }
+            .result-area .result-value { font-size: 2.3rem; }
+            .dual-results .result-box .result-value { font-size: 1.4rem; }
+            .splits-table th, .splits-table td,
+            .reference-table th, .reference-table td { padding: 9px 6px; font-size: 0.88rem; }
+            .zone-pace { font-size: 1.08rem; }
         }
-
-        /* Desktop Short Labels Hidden */
-        .tab-label-short {
-            display: none;
-        }
-
-        @media (max-width: 600px) {
-            .tab-label-short {
-                display: inline;
-            }
-            .tab-label {
-                display: none;
-            }
-        }
-
-        /* Small Mobile */
         @media (max-width: 380px) {
-            .logo-text h1 {
-                font-size: 1.3rem;
-            }
-
-            .subtitle {
-                font-size: 0.75rem;
-            }
-
-            .tab-btn {
-                padding: 10px 4px;
-                font-size: 0.72rem;
-                gap: 3px;
-            }
-
-            .multi-results {
-                gap: 5px;
-            }
-
-            .result-box .result-value {
-                font-size: 1rem;
-            }
+            .logo-text h1 { font-size: 1.1rem; }
+            .subtitle { font-size: 0.72rem; }
+            .tab-btn { padding: 8px 1px; font-size: 0.58rem; gap: 2px; }
+            .result-box .result-value { font-size: 1.05rem; }
         }
 
-        /* Reduced Motion */
         @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                transition-duration: 0.01ms !important;
-            }
+            *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
 
-        /* Focus Visible */
-        :focus-visible {
-            outline: 2px solid var(--primary);
-            outline-offset: 2px;
-        }
-
-        input:focus-visible {
-            outline: none;
-        }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        input:focus-visible { outline: none; }
     </style>
 </head>
 <body>
@@ -684,7 +673,7 @@
         <header>
             <div class="logo">
                 <div class="logo-icon">
-                    <span class="material-symbols-outlined">directions_run</span>
+                    <span class="material-symbols-rounded">directions_run</span>
                 </div>
                 <div class="logo-text">
                     <h1>PACE CALCULATOR</h1>
@@ -694,228 +683,414 @@
         </header>
 
         <!-- Tab Navigation -->
-        <nav class="tab-nav" role="tablist" aria-label="換算モード切り替え">
-            <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="card-pace" data-tab="card-pace">
-                <span class="material-symbols-outlined">pace</span>
-                <span class="tab-label">1kmペース</span>
-                <span class="tab-label-short">ペース</span>
+        <nav class="tab-nav" role="tablist" aria-label="機能切り替え">
+            <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="card-convert" data-tab="card-convert">
+                <span class="material-symbols-rounded">pace</span>
+                <span>換算</span>
             </button>
-            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="card-marathon" data-tab="card-marathon">
-                <span class="material-symbols-outlined">emoji_events</span>
-                <span class="tab-label">フルマラソン</span>
-                <span class="tab-label-short">マラソン</span>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="card-predict" data-tab="card-predict">
+                <span class="material-symbols-rounded">trending_up</span>
+                <span>予測</span>
             </button>
-            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="card-track" data-tab="card-track">
-                <span class="material-symbols-outlined">stadium</span>
-                <span class="tab-label">トラック</span>
-                <span class="tab-label-short">トラック</span>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="card-training" data-tab="card-training">
+                <span class="material-symbols-rounded">fitness_center</span>
+                <span>練習</span>
+            </button>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="card-splits" data-tab="card-splits">
+                <span class="material-symbols-rounded">timer</span>
+                <span>スプリット</span>
+            </button>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="card-course" data-tab="card-course">
+                <span class="material-symbols-rounded">map</span>
+                <span>コース</span>
             </button>
         </nav>
 
-        <!-- Card 1: 1kmペース → 各距離タイム -->
-        <div class="card active" id="card-pace" role="tabpanel">
+        <!-- ============ Card: 換算 ============ -->
+        <div class="card active" id="card-convert" role="tabpanel">
             <div class="card-header">
                 <div class="card-icon orange">
-                    <span class="material-symbols-outlined">pace</span>
+                    <span class="material-symbols-rounded">pace</span>
                 </div>
                 <div>
-                    <div class="card-title">1KMペースから換算</div>
-                    <div class="card-subtitle">各距離のタイムを一括計算</div>
+                    <div class="card-title">ペース換算</div>
+                    <div class="card-subtitle">ペース・距離・タイムを相互変換</div>
                 </div>
             </div>
 
-            <div class="input-group">
-                <div class="input-field">
-                    <label for="pace-min">分</label>
-                    <input type="number" id="pace-min" placeholder="5" min="0" max="30" value="5" inputmode="numeric">
+            <!-- 1kmペース → 各距離 -->
+            <div class="sub-section">
+                <div class="sub-title"><span class="material-symbols-rounded">pace</span>1kmペースから各距離タイム</div>
+                <div class="input-group">
+                    <div class="input-field">
+                        <label for="pace-min">分</label>
+                        <input type="number" id="pace-min" placeholder="5" min="0" max="30" value="5" inputmode="numeric">
+                    </div>
+                    <span class="separator">:</span>
+                    <div class="input-field">
+                        <label for="pace-sec">秒</label>
+                        <input type="number" id="pace-sec" placeholder="00" min="0" max="59" value="0" inputmode="numeric">
+                    </div>
                 </div>
-                <span class="separator">:</span>
-                <div class="input-field">
-                    <label for="pace-sec">秒</label>
-                    <input type="number" id="pace-sec" placeholder="00" min="0" max="59" value="0" inputmode="numeric">
-                </div>
-            </div>
 
-            <div class="section-label">距離別タイム</div>
+                <div class="section-label">距離別タイム</div>
 
-            <div class="multi-results">
-                <div class="result-box">
-                    <div class="result-label">5km</div>
-                    <div class="result-value" id="5km-result">--:--</div>
+                <div class="multi-results">
+                    <div class="result-box"><div class="result-label">5km</div><div class="result-value" id="5km-result">--:--</div></div>
+                    <div class="result-box"><div class="result-label">10km</div><div class="result-value" id="10km-result">--:--</div></div>
+                    <div class="result-box"><div class="result-label">15km</div><div class="result-value" id="15km-result">--:--</div></div>
+                    <div class="result-box"><div class="result-label">20km</div><div class="result-value" id="20km-result">--:--</div></div>
+                    <div class="result-box highlight"><div class="result-label">ハーフ</div><div class="result-value" id="half-result">--:--:--</div><div class="result-detail">21.0975km</div></div>
+                    <div class="result-box"><div class="result-label">25km</div><div class="result-value" id="25km-result">--:--</div></div>
+                    <div class="result-box"><div class="result-label">30km</div><div class="result-value" id="30km-result">--:--</div></div>
+                    <div class="result-box"><div class="result-label">35km</div><div class="result-value" id="35km-result">--:--</div></div>
+                    <div class="result-box"><div class="result-label">40km</div><div class="result-value" id="40km-result">--:--</div></div>
+                    <div class="result-box highlight"><div class="result-label">フルマラソン</div><div class="result-value" id="marathon-result">--:--:--</div><div class="result-detail">42.195km</div></div>
+                    <div class="result-box"><div class="result-label">トラック1周</div><div class="result-value" id="track-result">--秒</div><div class="result-detail">400m</div></div>
                 </div>
-                <div class="result-box">
-                    <div class="result-label">10km</div>
-                    <div class="result-value" id="10km-result">--:--</div>
-                </div>
-                <div class="result-box">
-                    <div class="result-label">15km</div>
-                    <div class="result-value" id="15km-result">--:--</div>
-                </div>
-                <div class="result-box">
-                    <div class="result-label">20km</div>
-                    <div class="result-value" id="20km-result">--:--</div>
-                </div>
-                <div class="result-box highlight">
-                    <div class="result-label">ハーフ</div>
-                    <div class="result-value" id="half-result">--:--:--</div>
-                    <div class="result-detail">21.0975km</div>
-                </div>
-                <div class="result-box">
-                    <div class="result-label">25km</div>
-                    <div class="result-value" id="25km-result">--:--</div>
-                </div>
-                <div class="result-box">
-                    <div class="result-label">30km</div>
-                    <div class="result-value" id="30km-result">--:--</div>
-                </div>
-                <div class="result-box">
-                    <div class="result-label">35km</div>
-                    <div class="result-value" id="35km-result">--:--</div>
-                </div>
-                <div class="result-box">
-                    <div class="result-label">40km</div>
-                    <div class="result-value" id="40km-result">--:--</div>
-                </div>
-                <div class="result-box highlight">
-                    <div class="result-label">フルマラソン</div>
-                    <div class="result-value" id="marathon-result">--:--:--</div>
-                    <div class="result-detail">42.195km</div>
-                </div>
-                <div class="result-box">
-                    <div class="result-label">トラック1周</div>
-                    <div class="result-value" id="track-result">--秒</div>
-                    <div class="result-detail">400m</div>
-                </div>
-            </div>
 
-            <div class="reference-section">
-                <button class="reference-toggle" onclick="toggleReference()" aria-expanded="false" aria-controls="reference-table-wrap">
-                    <span class="material-symbols-outlined">expand_more</span>
-                    参考ペース表
-                </button>
-                <div class="reference-table-wrap" id="reference-table-wrap">
-                    <div class="reference-table-inner">
-                        <div class="reference-table">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>1kmペース</th>
-                                        <th>フルマラソン</th>
-                                        <th>トラック1周</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="reference-tbody">
-                                </tbody>
-                            </table>
+                <div class="reference-section">
+                    <button class="reference-toggle" onclick="toggleReference()" aria-expanded="false" aria-controls="reference-table-wrap">
+                        <span class="material-symbols-rounded">expand_more</span>
+                        参考ペース表
+                    </button>
+                    <div class="reference-table-wrap" id="reference-table-wrap">
+                        <div class="reference-table-inner">
+                            <div class="reference-table">
+                                <table>
+                                    <thead>
+                                        <tr><th>1kmペース</th><th>フルマラソン</th><th>トラック1周</th></tr>
+                                    </thead>
+                                    <tbody id="reference-tbody"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- フルマラソンタイム → 1kmペース -->
+            <div class="sub-section">
+                <div class="sub-title"><span class="material-symbols-rounded">emoji_events</span>フルマラソンタイムからペース逆算</div>
+                <div class="input-group">
+                    <div class="input-field">
+                        <label for="marathon-hour">時間</label>
+                        <input type="number" id="marathon-hour" placeholder="3" min="0" max="10" value="3" inputmode="numeric">
+                    </div>
+                    <span class="separator">:</span>
+                    <div class="input-field">
+                        <label for="marathon-min">分</label>
+                        <input type="number" id="marathon-min" placeholder="00" min="0" max="59" value="0" inputmode="numeric">
+                    </div>
+                    <span class="separator">:</span>
+                    <div class="input-field">
+                        <label for="marathon-sec">秒</label>
+                        <input type="number" id="marathon-sec" placeholder="00" min="0" max="59" value="0" inputmode="numeric">
+                    </div>
+                </div>
+                <div class="result-area">
+                    <div class="result-label">1kmあたりのペース</div>
+                    <div class="result-value" id="pace-result">-'--"</div>
+                    <div class="result-detail">このペースで42.195kmを走ります</div>
+                </div>
+            </div>
+
+            <!-- トラック種目 → 換算 -->
+            <div class="sub-section">
+                <div class="sub-title"><span class="material-symbols-rounded">stadium</span>トラック種目タイムから換算</div>
+                <label class="field-label" for="track-distance">種目（距離）</label>
+                <select class="input-select" id="track-distance">
+                    <option value="200">200m</option>
+                    <option value="400" selected>400m（1周）</option>
+                    <option value="800">800m</option>
+                    <option value="1000">1000m</option>
+                    <option value="1600">1600m（約1マイル）</option>
+                </select>
+                <div class="input-group" style="margin-top:12px;">
+                    <div class="input-field">
+                        <label for="track-min">分</label>
+                        <input type="number" id="track-min" placeholder="1" min="0" max="20" value="1" inputmode="numeric">
+                    </div>
+                    <span class="separator">:</span>
+                    <div class="input-field">
+                        <label for="track-sec">秒</label>
+                        <input type="number" id="track-sec" placeholder="30" min="0" max="59" value="30" inputmode="numeric">
+                    </div>
+                </div>
+                <div class="dual-results">
+                    <div class="result-box highlight"><div class="result-label">1kmペース</div><div class="result-value" id="track-pace-result">-'--"</div></div>
+                    <div class="result-box highlight"><div class="result-label">フルマラソン（同ペース）</div><div class="result-value" id="track-marathon-result">--:--:--</div></div>
+                </div>
+            </div>
         </div>
 
-        <!-- Card 2: フルマラソンタイム → 1kmペース -->
-        <div class="card" id="card-marathon" role="tabpanel">
+        <!-- ============ Card: 予測 ============ -->
+        <div class="card" id="card-predict" role="tabpanel">
             <div class="card-header">
                 <div class="card-icon teal">
-                    <span class="material-symbols-outlined">emoji_events</span>
+                    <span class="material-symbols-rounded">trending_up</span>
                 </div>
                 <div>
-                    <div class="card-title">フルマラソンタイムから換算</div>
-                    <div class="card-subtitle">1kmあたりのペースを逆算</div>
+                    <div class="card-title">レースタイム予測</div>
+                    <div class="card-subtitle">ベストタイムから他距離を予測（リーゲル公式）</div>
                 </div>
             </div>
 
-            <div class="input-group">
-                <div class="input-field">
-                    <label for="marathon-hour">時間</label>
-                    <input type="number" id="marathon-hour" placeholder="3" min="0" max="10" value="3" inputmode="numeric">
+            <div class="sub-section">
+                <div class="sub-title"><span class="material-symbols-rounded">analytics</span>基準レース</div>
+                <label class="field-label">距離</label>
+                <div class="distance-presets" id="predict-presets">
+                    <button class="preset-btn" data-dist="5" type="button">5km</button>
+                    <button class="preset-btn active" data-dist="10" type="button">10km</button>
+                    <button class="preset-btn" data-dist="21.0975" type="button">ハーフ</button>
+                    <button class="preset-btn" data-dist="42.195" type="button">フル</button>
+                    <button class="preset-btn" data-dist="custom" type="button">任意</button>
                 </div>
-                <span class="separator">:</span>
-                <div class="input-field">
-                    <label for="marathon-min">分</label>
-                    <input type="number" id="marathon-min" placeholder="00" min="0" max="59" value="0" inputmode="numeric">
+                <div class="custom-distance-wrap" id="predict-custom-wrap" style="display:none;">
+                    <label class="field-label" for="predict-custom-dist">距離 (km)</label>
+                    <input class="input-select" type="number" id="predict-custom-dist" placeholder="例: 16" min="0.1" step="0.1" inputmode="decimal" style="text-align:left;">
                 </div>
-                <span class="separator">:</span>
-                <div class="input-field">
-                    <label for="marathon-sec">秒</label>
-                    <input type="number" id="marathon-sec" placeholder="00" min="0" max="59" value="0" inputmode="numeric">
+
+                <label class="field-label" style="margin-top:14px;">タイム</label>
+                <div class="input-group">
+                    <div class="input-field">
+                        <label for="predict-hour">時間</label>
+                        <input type="number" id="predict-hour" placeholder="0" min="0" max="20" value="0" inputmode="numeric">
+                    </div>
+                    <span class="separator">:</span>
+                    <div class="input-field">
+                        <label for="predict-min">分</label>
+                        <input type="number" id="predict-min" placeholder="45" min="0" max="59" value="45" inputmode="numeric">
+                    </div>
+                    <span class="separator">:</span>
+                    <div class="input-field">
+                        <label for="predict-sec">秒</label>
+                        <input type="number" id="predict-sec" placeholder="00" min="0" max="59" value="0" inputmode="numeric">
+                    </div>
+                </div>
+
+                <div class="section-label">予測タイム</div>
+                <div class="multi-results">
+                    <div class="result-box"><div class="result-label">5km</div><div class="result-value" id="pred-5">--:--</div></div>
+                    <div class="result-box"><div class="result-label">10km</div><div class="result-value" id="pred-10">--:--</div></div>
+                    <div class="result-box"><div class="result-label">15km</div><div class="result-value" id="pred-15">--:--</div></div>
+                    <div class="result-box highlight"><div class="result-label">ハーフ</div><div class="result-value" id="pred-half">--:--:--</div></div>
+                    <div class="result-box"><div class="result-label">30km</div><div class="result-value" id="pred-30">--:--:--</div></div>
+                    <div class="result-box highlight"><div class="result-label">フル</div><div class="result-value" id="pred-full">--:--:--</div></div>
                 </div>
             </div>
 
-            <div class="result-area">
-                <div class="result-label">1kmあたりのペース</div>
-                <div class="result-value" id="pace-result">-'--"</div>
-                <div class="result-detail">このペースで42.195kmを走ります</div>
+            <div class="sub-section">
+                <div class="sub-title"><span class="material-symbols-rounded">flag</span>ゴール逆引き</div>
+                <div class="sub-desc">目標タイムから必要な1kmペースを計算します</div>
+                <label class="field-label">距離</label>
+                <div class="distance-presets" id="goal-presets">
+                    <button class="preset-btn" data-dist="5" type="button">5km</button>
+                    <button class="preset-btn" data-dist="10" type="button">10km</button>
+                    <button class="preset-btn" data-dist="21.0975" type="button">ハーフ</button>
+                    <button class="preset-btn active" data-dist="42.195" type="button">フル</button>
+                    <button class="preset-btn" data-dist="custom" type="button">任意</button>
+                </div>
+                <div class="custom-distance-wrap" id="goal-custom-wrap" style="display:none;">
+                    <label class="field-label" for="goal-custom-dist">距離 (km)</label>
+                    <input class="input-select" type="number" id="goal-custom-dist" placeholder="例: 16" min="0.1" step="0.1" inputmode="decimal" style="text-align:left;">
+                </div>
+
+                <label class="field-label" style="margin-top:14px;">目標タイム</label>
+                <div class="input-group">
+                    <div class="input-field">
+                        <label for="goal-hour">時間</label>
+                        <input type="number" id="goal-hour" placeholder="3" min="0" max="20" value="3" inputmode="numeric">
+                    </div>
+                    <span class="separator">:</span>
+                    <div class="input-field">
+                        <label for="goal-min">分</label>
+                        <input type="number" id="goal-min" placeholder="30" min="0" max="59" value="30" inputmode="numeric">
+                    </div>
+                    <span class="separator">:</span>
+                    <div class="input-field">
+                        <label for="goal-sec">秒</label>
+                        <input type="number" id="goal-sec" placeholder="00" min="0" max="59" value="0" inputmode="numeric">
+                    </div>
+                </div>
+                <div class="dual-results">
+                    <div class="result-box highlight"><div class="result-label">必要な1kmペース</div><div class="result-value" id="goal-pace">-'--"</div></div>
+                    <div class="result-box highlight"><div class="result-label">時速</div><div class="result-value" id="goal-speed">--km/h</div></div>
+                </div>
             </div>
         </div>
 
-        <!-- Card 3: トラック1周タイム → 各種換算 -->
-        <div class="card" id="card-track" role="tabpanel">
+        <!-- ============ Card: 練習 ============ -->
+        <div class="card" id="card-training" role="tabpanel">
             <div class="card-header">
-                <div class="card-icon yellow">
-                    <span class="material-symbols-outlined">stadium</span>
+                <div class="card-icon purple">
+                    <span class="material-symbols-rounded">fitness_center</span>
                 </div>
                 <div>
-                    <div class="card-title">トラック1周タイムから換算</div>
-                    <div class="card-subtitle">400mタイムからペース・マラソンを算出</div>
+                    <div class="card-title">トレーニングペース</div>
+                    <div class="card-subtitle">レースタイムから練習ペースを算出（VDOT）</div>
                 </div>
             </div>
 
+            <label class="field-label">基準レースの距離</label>
+            <div class="distance-presets" id="training-presets">
+                <button class="preset-btn" data-dist="5" type="button">5km</button>
+                <button class="preset-btn active" data-dist="10" type="button">10km</button>
+                <button class="preset-btn" data-dist="21.0975" type="button">ハーフ</button>
+                <button class="preset-btn" data-dist="42.195" type="button">フル</button>
+                <button class="preset-btn" data-dist="custom" type="button">任意</button>
+            </div>
+            <div class="custom-distance-wrap" id="training-custom-wrap" style="display:none;">
+                <label class="field-label" for="training-custom-dist">距離 (km)</label>
+                <input class="input-select" type="number" id="training-custom-dist" placeholder="例: 3" min="0.1" step="0.1" inputmode="decimal" style="text-align:left;">
+            </div>
+
+            <label class="field-label" style="margin-top:14px;">レースタイム</label>
             <div class="input-group">
                 <div class="input-field">
-                    <label for="track-min">分</label>
-                    <input type="number" id="track-min" placeholder="1" min="0" max="10" value="1" inputmode="numeric">
+                    <label for="training-hour">時間</label>
+                    <input type="number" id="training-hour" placeholder="0" min="0" max="20" value="0" inputmode="numeric">
                 </div>
                 <span class="separator">:</span>
                 <div class="input-field">
-                    <label for="track-sec">秒</label>
-                    <input type="number" id="track-sec" placeholder="30" min="0" max="59" value="30" inputmode="numeric">
+                    <label for="training-min">分</label>
+                    <input type="number" id="training-min" placeholder="45" min="0" max="59" value="45" inputmode="numeric">
+                </div>
+                <span class="separator">:</span>
+                <div class="input-field">
+                    <label for="training-sec">秒</label>
+                    <input type="number" id="training-sec" placeholder="00" min="0" max="59" value="0" inputmode="numeric">
                 </div>
             </div>
 
-            <div class="dual-results">
-                <div class="result-box highlight">
-                    <div class="result-label">1kmペース</div>
-                    <div class="result-value" id="track-pace-result">-'--"</div>
+            <div class="vdot-display">
+                <div class="result-label">推定 VDOT</div>
+                <div class="result-value" id="vdot-value">--</div>
+            </div>
+
+            <div class="training-zones" id="training-zones"></div>
+        </div>
+
+        <!-- ============ Card: スプリット ============ -->
+        <div class="card" id="card-splits" role="tabpanel">
+            <div class="card-header">
+                <div class="card-icon orange">
+                    <span class="material-symbols-rounded">timer</span>
                 </div>
-                <div class="result-box highlight">
-                    <div class="result-label">フルマラソン</div>
-                    <div class="result-value" id="track-marathon-result">--:--:--</div>
+                <div>
+                    <div class="card-title">スプリット表</div>
+                    <div class="card-subtitle">目標ペースの通過タイム一覧</div>
                 </div>
+            </div>
+
+            <label class="field-label">1kmあたりの目標ペース</label>
+            <div class="input-group">
+                <div class="input-field">
+                    <label for="splits-pace-min">分</label>
+                    <input type="number" id="splits-pace-min" placeholder="5" min="0" max="30" value="5" inputmode="numeric">
+                </div>
+                <span class="separator">:</span>
+                <div class="input-field">
+                    <label for="splits-pace-sec">秒</label>
+                    <input type="number" id="splits-pace-sec" placeholder="00" min="0" max="59" value="0" inputmode="numeric">
+                </div>
+            </div>
+
+            <label class="field-label" style="margin-top:14px;">距離</label>
+            <div class="distance-presets" id="splits-presets">
+                <button class="preset-btn" data-dist="5" type="button">5km</button>
+                <button class="preset-btn active" data-dist="10" type="button">10km</button>
+                <button class="preset-btn" data-dist="21.0975" type="button">ハーフ</button>
+                <button class="preset-btn" data-dist="42.195" type="button">フル</button>
+                <button class="preset-btn" data-dist="custom" type="button">任意</button>
+            </div>
+            <div class="custom-distance-wrap" id="splits-custom-wrap" style="display:none;">
+                <label class="field-label" for="splits-custom-dist">距離 (km)</label>
+                <input class="input-select" type="number" id="splits-custom-dist" placeholder="例: 16" min="0.1" max="100" step="0.1" inputmode="decimal" style="text-align:left;">
+            </div>
+
+            <div class="result-area" style="margin-top:18px;">
+                <div class="result-label">予想ゴールタイム</div>
+                <div class="result-value" id="splits-finish">--:--:--</div>
+            </div>
+
+            <div class="splits-wrap">
+                <table class="splits-table">
+                    <thead>
+                        <tr><th>距離</th><th>区間</th><th>通過タイム</th></tr>
+                    </thead>
+                    <tbody id="splits-tbody"></tbody>
+                </table>
+            </div>
+            <div class="btn-row">
+                <button class="action-btn" id="splits-copy-btn" type="button">
+                    <span class="material-symbols-rounded">content_copy</span>
+                    <span id="splits-copy-label">スプリット表をコピー</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ============ Card: コース ============ -->
+        <div class="card" id="card-course" role="tabpanel">
+            <div class="card-header">
+                <div class="card-icon green">
+                    <span class="material-symbols-rounded">map</span>
+                </div>
+                <div>
+                    <div class="card-title">コースマップ</div>
+                    <div class="card-subtitle">起点と距離からコース案を提示</div>
+                </div>
+            </div>
+
+            <div class="course-controls">
+                <div class="course-row">
+                    <div>
+                        <label class="field-label" for="course-distance">走る距離 (km)</label>
+                        <input class="input-select" type="number" id="course-distance" value="10" min="0.5" max="50" step="0.5" inputmode="decimal" style="text-align:left;">
+                    </div>
+                    <button class="action-btn" id="course-locate-btn" type="button" style="flex:0 0 auto; padding:12px 16px;">
+                        <span class="material-symbols-rounded">my_location</span>
+                        現在地
+                    </button>
+                </div>
+            </div>
+
+            <div id="map"></div>
+            <div class="map-hint">
+                <span class="material-symbols-rounded">touch_app</span>
+                地図をタップして起点を置くか「現在地」ボタンを押してください
+            </div>
+
+            <div class="course-options" id="course-options">
+                <div class="empty-hint">起点を設定するとコース案が表示されます</div>
+            </div>
+
+            <div class="privacy-note">
+                <span class="material-symbols-rounded">verified_user</span>
+                <span>あなたの位置情報は端末内だけで処理されます。サーバーへの送信・保存・共有は一切行いません。コース案も端末内で計算しています（地図の表示にOpenStreetMapのタイル画像のみ取得します）。コース案は道路に厳密には沿わない概算ルートです。</span>
             </div>
         </div>
     </div>
 
     <footer>
         <p>フルマラソン: 42.195km | ハーフ: 21.0975km | トラック: 400m</p>
+        <p style="margin-top:8px;">
+            <a href="#" id="share-link" style="color: var(--text-muted); text-decoration: none;">
+                🔗 この計算条件のリンクをコピー
+            </a>
+        </p>
     </footer>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
         const MARATHON_DISTANCE = 42.195;
         const HALF_MARATHON_DISTANCE = 21.0975;
         const TRACK_DISTANCE = 0.4;
+        const RIEGEL_EXP = 1.06;
+        const STORAGE_PREFIX = 'pace-calc:v1:';
 
-        // --- Tab Navigation ---
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        const cards = document.querySelectorAll('.card');
-
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetId = btn.dataset.tab;
-
-                tabBtns.forEach(b => {
-                    b.classList.remove('active');
-                    b.setAttribute('aria-selected', 'false');
-                });
-                btn.classList.add('active');
-                btn.setAttribute('aria-selected', 'true');
-
-                cards.forEach(c => c.classList.remove('active'));
-                document.getElementById(targetId).classList.add('active');
-            });
-        });
-
-        // --- Time Conversion Utilities ---
+        // ============ Time Conversion Utilities ============
         function secondsToHMS(totalSeconds) {
             if (isNaN(totalSeconds) || totalSeconds <= 0) return '--:--:--';
             const hours = Math.floor(totalSeconds / 3600);
@@ -957,84 +1132,104 @@
             }
         }
 
-        // --- Card 1: 1kmペースからの換算 ---
-        function calculateFromPace() {
-            const min = parseFloat(document.getElementById('pace-min').value) || 0;
-            const sec = parseFloat(document.getElementById('pace-sec').value) || 0;
-            const paceInSeconds = min * 60 + sec;
+        function val(id) { return parseFloat(document.getElementById(id).value) || 0; }
+        function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
 
+        // ============ Tab Navigation ============
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const cards = document.querySelectorAll('.card');
+
+        function activateTab(targetId) {
+            tabBtns.forEach(b => {
+                const on = b.dataset.tab === targetId;
+                b.classList.toggle('active', on);
+                b.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            cards.forEach(c => c.classList.toggle('active', c.id === targetId));
+            // 地図タブを開いたらサイズ再計算
+            if (targetId === 'card-course' && window._map) {
+                setTimeout(() => window._map.invalidateSize(), 100);
+            }
+        }
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+            // 矢印キーでタブ移動
+            btn.addEventListener('keydown', (e) => {
+                const list = Array.from(tabBtns);
+                const i = list.indexOf(btn);
+                if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    const next = e.key === 'ArrowRight' ? (i + 1) % list.length : (i - 1 + list.length) % list.length;
+                    list[next].focus();
+                    activateTab(list[next].dataset.tab);
+                }
+            });
+        });
+
+        // ============ 距離プリセット共通 ============
+        function setupDistancePresets(groupId, customWrapId, onChange) {
+            const group = document.getElementById(groupId);
+            const customWrap = document.getElementById(customWrapId);
+            group.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    group.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    customWrap.style.display = btn.dataset.dist === 'custom' ? 'block' : 'none';
+                    onChange();
+                });
+            });
+        }
+        function getPresetDistance(groupId, customInputId) {
+            const active = document.querySelector(`#${groupId} .preset-btn.active`);
+            if (!active) return 0;
+            if (active.dataset.dist === 'custom') {
+                return parseFloat(document.getElementById(customInputId).value) || 0;
+            }
+            return parseFloat(active.dataset.dist);
+        }
+
+        // ============ 換算: 1kmペース ============
+        function calculateFromPace() {
+            const paceInSeconds = val('pace-min') * 60 + val('pace-sec');
+            const ids = ['5km-result','10km-result','15km-result','20km-result','25km-result','30km-result','35km-result','40km-result'];
             if (paceInSeconds <= 0) {
-                document.getElementById('5km-result').textContent = '--:--';
-                document.getElementById('10km-result').textContent = '--:--';
-                document.getElementById('15km-result').textContent = '--:--';
-                document.getElementById('20km-result').textContent = '--:--';
-                document.getElementById('half-result').textContent = '--:--:--';
-                document.getElementById('25km-result').textContent = '--:--';
-                document.getElementById('30km-result').textContent = '--:--';
-                document.getElementById('35km-result').textContent = '--:--';
-                document.getElementById('40km-result').textContent = '--:--';
-                document.getElementById('marathon-result').textContent = '--:--:--';
-                document.getElementById('track-result').textContent = '--秒';
+                ids.forEach(id => setText(id, '--:--'));
+                setText('half-result', '--:--:--');
+                setText('marathon-result', '--:--:--');
+                setText('track-result', '--秒');
                 return;
             }
-
-            document.getElementById('5km-result').textContent = secondsToTimeAuto(paceInSeconds * 5);
-            document.getElementById('10km-result').textContent = secondsToTimeAuto(paceInSeconds * 10);
-            document.getElementById('15km-result').textContent = secondsToTimeAuto(paceInSeconds * 15);
-            document.getElementById('20km-result').textContent = secondsToTimeAuto(paceInSeconds * 20);
-            document.getElementById('25km-result').textContent = secondsToTimeAuto(paceInSeconds * 25);
-            document.getElementById('30km-result').textContent = secondsToTimeAuto(paceInSeconds * 30);
-            document.getElementById('35km-result').textContent = secondsToTimeAuto(paceInSeconds * 35);
-            document.getElementById('40km-result').textContent = secondsToTimeAuto(paceInSeconds * 40);
-
-            const halfSeconds = paceInSeconds * HALF_MARATHON_DISTANCE;
-            document.getElementById('half-result').textContent = secondsToHMS(halfSeconds);
-
-            const marathonSeconds = paceInSeconds * MARATHON_DISTANCE;
-            document.getElementById('marathon-result').textContent = secondsToHMS(marathonSeconds);
-
-            const trackSeconds = paceInSeconds * TRACK_DISTANCE;
-            document.getElementById('track-result').textContent = secondsToTrackTime(trackSeconds);
-
+            [5,10,15,20,25,30,35,40].forEach(km => setText(`${km}km-result`, secondsToTimeAuto(paceInSeconds * km)));
+            setText('half-result', secondsToHMS(paceInSeconds * HALF_MARATHON_DISTANCE));
+            setText('marathon-result', secondsToHMS(paceInSeconds * MARATHON_DISTANCE));
+            setText('track-result', secondsToTrackTime(paceInSeconds * TRACK_DISTANCE));
             highlightActivePace(paceInSeconds);
         }
 
-        // --- Card 2: フルマラソンタイムからの換算 ---
+        // ============ 換算: フルマラソン → ペース ============
         function calculateFromMarathon() {
-            const hours = parseFloat(document.getElementById('marathon-hour').value) || 0;
-            const min = parseFloat(document.getElementById('marathon-min').value) || 0;
-            const sec = parseFloat(document.getElementById('marathon-sec').value) || 0;
-            const totalSeconds = hours * 3600 + min * 60 + sec;
-
-            if (totalSeconds <= 0) {
-                document.getElementById('pace-result').textContent = "-'--\"";
-                return;
-            }
-
-            const paceSeconds = totalSeconds / MARATHON_DISTANCE;
-            document.getElementById('pace-result').textContent = secondsToMinSec(paceSeconds);
+            const totalSeconds = val('marathon-hour') * 3600 + val('marathon-min') * 60 + val('marathon-sec');
+            if (totalSeconds <= 0) { setText('pace-result', "-'--\""); return; }
+            setText('pace-result', secondsToMinSec(totalSeconds / MARATHON_DISTANCE));
         }
 
-        // --- Card 3: トラック1周タイムからの換算 ---
+        // ============ 換算: トラック種目 ============
         function calculateFromTrack() {
-            const min = parseFloat(document.getElementById('track-min').value) || 0;
-            const sec = parseFloat(document.getElementById('track-sec').value) || 0;
-            const trackSeconds = min * 60 + sec;
-
+            const trackSeconds = val('track-min') * 60 + val('track-sec');
+            const distM = parseFloat(document.getElementById('track-distance').value) || 400;
+            const distKm = distM / 1000;
             if (trackSeconds <= 0) {
-                document.getElementById('track-pace-result').textContent = "-'--\"";
-                document.getElementById('track-marathon-result').textContent = '--:--:--';
+                setText('track-pace-result', "-'--\"");
+                setText('track-marathon-result', '--:--:--');
                 return;
             }
-
-            const paceSeconds = trackSeconds / TRACK_DISTANCE;
-            document.getElementById('track-pace-result').textContent = secondsToMinSec(paceSeconds);
-
-            const marathonSeconds = paceSeconds * MARATHON_DISTANCE;
-            document.getElementById('track-marathon-result').textContent = secondsToHMS(marathonSeconds);
+            const paceSeconds = trackSeconds / distKm;
+            setText('track-pace-result', secondsToMinSec(paceSeconds));
+            setText('track-marathon-result', secondsToHMS(paceSeconds * MARATHON_DISTANCE));
         }
 
-        // --- Reference Table ---
+        // ============ 参考ペース表 ============
         function toggleReference() {
             const wrap = document.getElementById('reference-table-wrap');
             const btn = document.querySelector('.reference-toggle');
@@ -1042,52 +1237,425 @@
             btn.classList.toggle('open', isOpen);
             btn.setAttribute('aria-expanded', isOpen);
         }
-
         function highlightActivePace(paceInSeconds) {
-            const rows = document.querySelectorAll('#reference-tbody tr');
-            rows.forEach(row => {
+            document.querySelectorAll('#reference-tbody tr').forEach(row => {
                 const rowPace = parseInt(row.dataset.pace, 10);
-                const diff = Math.abs(rowPace - paceInSeconds);
-                row.classList.toggle('active-pace', diff < 5);
+                row.classList.toggle('active-pace', Math.abs(rowPace - paceInSeconds) < 5);
             });
         }
-
         function generateReferenceTable() {
             const tbody = document.getElementById('reference-tbody');
             for (let totalSec = 180; totalSec <= 360; totalSec += 10) {
                 const min = Math.floor(totalSec / 60);
                 const sec = totalSec % 60;
                 const paceSeconds = min * 60 + sec;
-                const marathonSeconds = paceSeconds * MARATHON_DISTANCE;
-                const trackSeconds = paceSeconds * TRACK_DISTANCE;
-
                 const row = document.createElement('tr');
                 row.dataset.pace = paceSeconds;
                 row.innerHTML = `
                     <td>${min}'${String(sec).padStart(2, '0')}"</td>
-                    <td>${secondsToHMS(marathonSeconds)}</td>
-                    <td>${secondsToTrackTime(trackSeconds)}</td>
-                `;
+                    <td>${secondsToHMS(paceSeconds * MARATHON_DISTANCE)}</td>
+                    <td>${secondsToTrackTime(paceSeconds * TRACK_DISTANCE)}</td>`;
                 tbody.appendChild(row);
             }
         }
 
-        // --- Event Listeners ---
-        document.getElementById('pace-min').addEventListener('input', calculateFromPace);
-        document.getElementById('pace-sec').addEventListener('input', calculateFromPace);
+        // ============ 予測: リーゲル公式 ============
+        function predictTime(baseDist, baseSec, targetDist) {
+            if (baseDist <= 0 || baseSec <= 0 || targetDist <= 0) return 0;
+            return baseSec * Math.pow(targetDist / baseDist, RIEGEL_EXP);
+        }
+        function calculatePredict() {
+            const baseDist = getPresetDistance('predict-presets', 'predict-custom-dist');
+            const baseSec = val('predict-hour') * 3600 + val('predict-min') * 60 + val('predict-sec');
+            const targets = [
+                ['pred-5', 5], ['pred-10', 10], ['pred-15', 15],
+                ['pred-half', HALF_MARATHON_DISTANCE], ['pred-30', 30], ['pred-full', MARATHON_DISTANCE]
+            ];
+            targets.forEach(([id, d]) => {
+                const t = predictTime(baseDist, baseSec, d);
+                setText(id, t > 0 ? secondsToTimeAuto(t) : '--:--');
+            });
+        }
 
-        document.getElementById('marathon-hour').addEventListener('input', calculateFromMarathon);
-        document.getElementById('marathon-min').addEventListener('input', calculateFromMarathon);
-        document.getElementById('marathon-sec').addEventListener('input', calculateFromMarathon);
+        // ============ 予測: ゴール逆引き ============
+        function calculateGoal() {
+            const dist = getPresetDistance('goal-presets', 'goal-custom-dist');
+            const totalSec = val('goal-hour') * 3600 + val('goal-min') * 60 + val('goal-sec');
+            if (dist <= 0 || totalSec <= 0) {
+                setText('goal-pace', "-'--\"");
+                setText('goal-speed', '--km/h');
+                return;
+            }
+            setText('goal-pace', secondsToMinSec(totalSec / dist));
+            const speed = dist / (totalSec / 3600);
+            setText('goal-speed', `${speed.toFixed(1)}km/h`);
+        }
 
-        document.getElementById('track-min').addEventListener('input', calculateFromTrack);
-        document.getElementById('track-sec').addEventListener('input', calculateFromTrack);
+        // ============ 練習: VDOT ============
+        function calcVdot(distKm, totalSec) {
+            if (distKm <= 0 || totalSec <= 0) return 0;
+            const distM = distKm * 1000;
+            const timeMin = totalSec / 60;
+            const v = distM / timeMin; // m/min
+            const pctMax = 0.8 + 0.1894393 * Math.exp(-0.012778 * timeMin)
+                + 0.2989558 * Math.exp(-0.1932605 * timeMin);
+            const vo2 = -4.60 + 0.182258 * v + 0.000104 * v * v;
+            return vo2 / pctMax;
+        }
+        // 目標%VO2maxから 1kmあたりの秒数を逆算
+        function vdotToPaceSecPerKm(vdot, pctVO2) {
+            const targetVO2 = vdot * pctVO2;
+            // vo2 = -4.60 + 0.182258 v + 0.000104 v^2 を v(m/min)について解く
+            const a = 0.000104, b = 0.182258, c = -4.60 - targetVO2;
+            const disc = b * b - 4 * a * c;
+            if (disc < 0) return 0;
+            const v = (-b + Math.sqrt(disc)) / (2 * a); // m/min
+            if (v <= 0) return 0;
+            return 1000 / v * 60; // sec/km
+        }
+        const TRAINING_ZONES = [
+            { key: 'E', name: 'Easy（イージー）', desc: 'ジョグ・回復走・LSD', pct: 0.70, range: [0.66, 0.74], color: '#22C55E' },
+            { key: 'M', name: 'Marathon（マラソン）', desc: 'マラソンレースペース', pct: 0.84, range: null, color: '#3B82F6' },
+            { key: 'T', name: 'Threshold（閾値走）', desc: 'テンポ走・LT向上', pct: 0.88, range: null, color: '#FF9F1C' },
+            { key: 'I', name: 'Interval（インターバル）', desc: 'VO2max向上・1000m〜', pct: 0.975, range: null, color: '#FF6B35' },
+            { key: 'R', name: 'Repetition（レペティション）', desc: 'スピード・200〜400m', pct: 1.05, range: null, color: '#EF4444' },
+        ];
+        function calculateTraining() {
+            const dist = getPresetDistance('training-presets', 'training-custom-dist');
+            const totalSec = val('training-hour') * 3600 + val('training-min') * 60 + val('training-sec');
+            const vdot = calcVdot(dist, totalSec);
+            const zonesEl = document.getElementById('training-zones');
+            if (vdot <= 0) {
+                setText('vdot-value', '--');
+                zonesEl.innerHTML = '<div class="empty-hint">距離とタイムを入力してください</div>';
+                return;
+            }
+            setText('vdot-value', vdot.toFixed(1));
+            zonesEl.innerHTML = '';
+            TRAINING_ZONES.forEach(z => {
+                let paceText;
+                if (z.range) {
+                    const slow = vdotToPaceSecPerKm(vdot, z.range[0]);
+                    const fast = vdotToPaceSecPerKm(vdot, z.range[1]);
+                    paceText = `${secondsToMinSec(fast)}〜${secondsToMinSec(slow)}`;
+                } else {
+                    paceText = secondsToMinSec(vdotToPaceSecPerKm(vdot, z.pct));
+                }
+                const row = document.createElement('div');
+                row.className = 'zone-row';
+                row.style.setProperty('--zone-color', z.color);
+                row.innerHTML = `
+                    <div class="zone-badge">${z.key}</div>
+                    <div class="zone-info">
+                        <div class="zone-name">${z.name}</div>
+                        <div class="zone-desc">${z.desc}</div>
+                    </div>
+                    <div class="zone-pace">${paceText}<span style="font-size:0.7rem;color:var(--text-muted);">/km</span></div>`;
+                zonesEl.appendChild(row);
+            });
+        }
 
-        // --- Init ---
+        // ============ スプリット表 ============
+        let lastSplitsText = '';
+        function calculateSplits() {
+            const paceSec = val('splits-pace-min') * 60 + val('splits-pace-sec');
+            const dist = getPresetDistance('splits-presets', 'splits-custom-dist');
+            const tbody = document.getElementById('splits-tbody');
+            tbody.innerHTML = '';
+            lastSplitsText = '';
+            if (paceSec <= 0 || dist <= 0) {
+                setText('splits-finish', '--:--:--');
+                tbody.innerHTML = '<tr><td colspan="3" class="empty-hint">ペースと距離を入力してください</td></tr>';
+                return;
+            }
+            setText('splits-finish', secondsToHMS(paceSec * dist));
+            const lines = ['距離\t区間\t通過タイム'];
+            const lastKm = Math.floor(dist);
+            for (let km = 1; km <= lastKm; km++) {
+                const cum = paceSec * km;
+                const isMile = km % 5 === 0;
+                const row = document.createElement('tr');
+                if (isMile) row.className = 'milestone';
+                row.innerHTML = `<td>${km}km</td><td>${secondsToMinSec(paceSec)}</td><td>${secondsToHMS(cum)}</td>`;
+                tbody.appendChild(row);
+                lines.push(`${km}km\t${secondsToMinSec(paceSec)}\t${secondsToHMS(cum)}`);
+            }
+            // 端数（ハーフ・フル等）
+            if (dist > lastKm) {
+                const cum = paceSec * dist;
+                const frac = (dist - lastKm).toFixed(4).replace(/0+$/, '');
+                const row = document.createElement('tr');
+                row.className = 'milestone';
+                row.innerHTML = `<td>${dist}km</td><td>+${frac}km</td><td>${secondsToHMS(cum)}</td>`;
+                tbody.appendChild(row);
+                lines.push(`${dist}km\tゴール\t${secondsToHMS(cum)}`);
+            }
+            lastSplitsText = lines.join('\n');
+        }
+        document.getElementById('splits-copy-btn').addEventListener('click', async () => {
+            if (!lastSplitsText) return;
+            try {
+                await navigator.clipboard.writeText(lastSplitsText);
+                setText('splits-copy-label', 'コピーしました！');
+            } catch (e) {
+                setText('splits-copy-label', 'コピーに失敗しました');
+            }
+            setTimeout(() => setText('splits-copy-label', 'スプリット表をコピー'), 2000);
+        });
+
+        // ============ コースマップ（Leaflet・端末内処理） ============
+        const COURSE_COLORS = ['#FF6B35', '#2EC4B6', '#8B5CF6', '#FFD166'];
+        let courseStart = null;     // {lat, lng} 端末内のみ・保存しない
+        let startMarker = null;
+        let coursePolylines = [];
+        let activeCourseIdx = 0;
+
+        function initMap() {
+            // 初期表示は汎用的な位置（皇居外周・東京駅周辺）。利用者の位置は使わない。
+            const map = L.map('map', { zoomControl: true }).setView([35.6852, 139.7528], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+            map.on('click', (e) => setCourseStart(e.latlng.lat, e.latlng.lng, false));
+            window._map = map;
+        }
+
+        // 球面上で start から bearing(度)・距離d(km)の地点を返す
+        function destinationPoint(lat, lng, bearingDeg, dKm) {
+            const R = 6371;
+            const br = bearingDeg * Math.PI / 180;
+            const lat1 = lat * Math.PI / 180;
+            const lng1 = lng * Math.PI / 180;
+            const dr = dKm / R;
+            const lat2 = Math.asin(Math.sin(lat1) * Math.cos(dr) + Math.cos(lat1) * Math.sin(dr) * Math.cos(br));
+            const lng2 = lng1 + Math.atan2(
+                Math.sin(br) * Math.sin(dr) * Math.cos(lat1),
+                Math.cos(dr) - Math.sin(lat1) * Math.sin(lat2));
+            return [lat2 * 180 / Math.PI, lng2 * 180 / Math.PI];
+        }
+        function haversine(a, b) {
+            const R = 6371;
+            const dLat = (b[0] - a[0]) * Math.PI / 180;
+            const dLng = (b[1] - a[1]) * Math.PI / 180;
+            const lat1 = a[0] * Math.PI / 180, lat2 = b[0] * Math.PI / 180;
+            const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+            return 2 * R * Math.asin(Math.sqrt(h));
+        }
+        function polylineLength(points) {
+            let total = 0;
+            for (let i = 1; i < points.length; i++) total += haversine(points[i-1], points[i]);
+            return total;
+        }
+
+        // 起点を通る円形ループ（多角形近似）。中心を起点から方位offsetDegにずらす
+        function makeLoop(lat, lng, targetKm, offsetDeg) {
+            const r = targetKm / (2 * Math.PI); // 半径km
+            const center = destinationPoint(lat, lng, offsetDeg, r);
+            const pts = [];
+            const steps = 48;
+            // 起点が円周上に来るよう、開始角を center→start 方向に合わせる
+            const startAngle = (offsetDeg + 180) % 360;
+            for (let i = 0; i <= steps; i++) {
+                const ang = startAngle + (360 * i / steps);
+                pts.push(destinationPoint(center[0], center[1], ang, r));
+            }
+            return pts;
+        }
+        // 往復コース（指定方位へ半分進んで折り返す）
+        function makeOutAndBack(lat, lng, targetKm, bearingDeg) {
+            const half = targetKm / 2;
+            const far = destinationPoint(lat, lng, bearingDeg, half);
+            return [[lat, lng], far, [lat, lng]];
+        }
+
+        function setCourseStart(lat, lng, recenter) {
+            courseStart = { lat, lng };
+            const map = window._map;
+            if (startMarker) map.removeLayer(startMarker);
+            startMarker = L.marker([lat, lng]).addTo(map).bindPopup('スタート地点');
+            if (recenter) map.setView([lat, lng], 15);
+            generateCourses();
+        }
+
+        function generateCourses() {
+            if (!courseStart) return;
+            const map = window._map;
+            const targetKm = parseFloat(document.getElementById('course-distance').value) || 10;
+            coursePolylines.forEach(p => map.removeLayer(p));
+            coursePolylines = [];
+
+            const { lat, lng } = courseStart;
+            const candidates = [
+                { name: '周回コース 北回り', pts: makeLoop(lat, lng, targetKm, 0) },
+                { name: '周回コース 東回り', pts: makeLoop(lat, lng, targetKm, 120) },
+                { name: '周回コース 西回り', pts: makeLoop(lat, lng, targetKm, 240) },
+                { name: '往復コース（北）', pts: makeOutAndBack(lat, lng, targetKm, 0) },
+            ];
+
+            const optionsEl = document.getElementById('course-options');
+            optionsEl.innerHTML = '';
+            const allBounds = [];
+
+            candidates.forEach((c, idx) => {
+                const color = COURSE_COLORS[idx % COURSE_COLORS.length];
+                const dist = polylineLength(c.pts);
+                const line = L.polyline(c.pts, { color, weight: 5, opacity: idx === activeCourseIdx ? 0.9 : 0.25 });
+                line.addTo(map);
+                coursePolylines.push(line);
+                c.pts.forEach(p => allBounds.push(p));
+
+                const card = document.createElement('div');
+                card.className = 'course-card' + (idx === activeCourseIdx ? ' active' : '');
+                card.style.setProperty('--course-color', color);
+                card.innerHTML = `
+                    <div class="course-swatch"></div>
+                    <div class="course-meta">
+                        <div class="course-name">${c.name}</div>
+                        <div class="course-dist">概算 ${dist.toFixed(2)} km</div>
+                    </div>
+                    <span class="material-symbols-rounded course-toggle-icon">${idx === activeCourseIdx ? 'visibility' : 'visibility_off'}</span>`;
+                card.addEventListener('click', () => selectCourse(idx));
+                optionsEl.appendChild(card);
+            });
+
+            if (allBounds.length) map.fitBounds(allBounds, { padding: [30, 30] });
+        }
+
+        function selectCourse(idx) {
+            activeCourseIdx = idx;
+            coursePolylines.forEach((line, i) => line.setStyle({ opacity: i === idx ? 0.9 : 0.25 }));
+            document.querySelectorAll('#course-options .course-card').forEach((card, i) => {
+                card.classList.toggle('active', i === idx);
+                const icon = card.querySelector('.course-toggle-icon');
+                if (icon) icon.textContent = i === idx ? 'visibility' : 'visibility_off';
+            });
+            if (coursePolylines[idx]) coursePolylines[idx].bringToFront();
+        }
+
+        document.getElementById('course-locate-btn').addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                alert('お使いのブラウザは位置情報に対応していません。地図をタップして起点を指定してください。');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => setCourseStart(pos.coords.latitude, pos.coords.longitude, true),
+                () => alert('現在地を取得できませんでした。地図をタップして起点を指定してください。\n（file://で開いている場合は取得できません）'),
+                { enableHighAccuracy: true, timeout: 8000 }
+            );
+        });
+        document.getElementById('course-distance').addEventListener('input', () => { if (courseStart) generateCourses(); });
+
+        // ============ localStorage 保存・復元（座標は除外） ============
+        const PERSIST_IDS = [
+            'pace-min','pace-sec','marathon-hour','marathon-min','marathon-sec',
+            'track-distance','track-min','track-sec',
+            'predict-hour','predict-min','predict-sec','predict-custom-dist',
+            'goal-hour','goal-min','goal-sec','goal-custom-dist',
+            'training-hour','training-min','training-sec','training-custom-dist',
+            'splits-pace-min','splits-pace-sec','splits-custom-dist',
+            'course-distance'
+        ];
+        function saveState() {
+            try {
+                PERSIST_IDS.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) localStorage.setItem(STORAGE_PREFIX + id, el.value);
+                });
+            } catch (e) { /* localStorage不可環境は無視 */ }
+        }
+        function loadState() {
+            try {
+                PERSIST_IDS.forEach(id => {
+                    const stored = localStorage.getItem(STORAGE_PREFIX + id);
+                    if (stored !== null) {
+                        const el = document.getElementById(id);
+                        if (el) el.value = stored;
+                    }
+                });
+            } catch (e) { /* 無視 */ }
+        }
+
+        // ============ URL共有（座標は含めない） ============
+        const SHARE_FIELDS = {
+            t: 'card-convert', // tabはコードで処理
+        };
+        function buildShareUrl() {
+            const params = new URLSearchParams();
+            const active = document.querySelector('.tab-btn.active');
+            if (active) params.set('tab', active.dataset.tab.replace('card-', ''));
+            PERSIST_IDS.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.value !== '') params.set(id, el.value);
+            });
+            return location.origin + location.pathname + '?' + params.toString();
+        }
+        function applyUrlParams() {
+            const params = new URLSearchParams(location.search);
+            if (![...params.keys()].length) return;
+            PERSIST_IDS.forEach(id => {
+                if (params.has(id)) {
+                    const el = document.getElementById(id);
+                    if (el) el.value = params.get(id);
+                }
+            });
+            const tab = params.get('tab');
+            if (tab) activateTab('card-' + tab);
+        }
+        document.getElementById('share-link').addEventListener('click', async (e) => {
+            e.preventDefault();
+            const url = buildShareUrl();
+            try {
+                await navigator.clipboard.writeText(url);
+                e.target.textContent = '✅ リンクをコピーしました！';
+            } catch (err) {
+                e.target.textContent = '⚠️ コピーできませんでした';
+            }
+            setTimeout(() => { e.target.textContent = '🔗 この計算条件のリンクをコピー'; }, 2000);
+        });
+
+        // ============ Event wiring ============
+        function recalcAll() {
+            calculateFromPace();
+            calculateFromMarathon();
+            calculateFromTrack();
+            calculatePredict();
+            calculateGoal();
+            calculateTraining();
+            calculateSplits();
+        }
+
+        // 換算
+        ['pace-min','pace-sec'].forEach(id => document.getElementById(id).addEventListener('input', calculateFromPace));
+        ['marathon-hour','marathon-min','marathon-sec'].forEach(id => document.getElementById(id).addEventListener('input', calculateFromMarathon));
+        ['track-min','track-sec'].forEach(id => document.getElementById(id).addEventListener('input', calculateFromTrack));
+        document.getElementById('track-distance').addEventListener('change', calculateFromTrack);
+        // 予測
+        ['predict-hour','predict-min','predict-sec','predict-custom-dist'].forEach(id => document.getElementById(id).addEventListener('input', calculatePredict));
+        ['goal-hour','goal-min','goal-sec','goal-custom-dist'].forEach(id => document.getElementById(id).addEventListener('input', calculateGoal));
+        // 練習
+        ['training-hour','training-min','training-sec','training-custom-dist'].forEach(id => document.getElementById(id).addEventListener('input', calculateTraining));
+        // スプリット
+        ['splits-pace-min','splits-pace-sec','splits-custom-dist'].forEach(id => document.getElementById(id).addEventListener('input', calculateSplits));
+
+        setupDistancePresets('predict-presets', 'predict-custom-wrap', calculatePredict);
+        setupDistancePresets('goal-presets', 'goal-custom-wrap', calculateGoal);
+        setupDistancePresets('training-presets', 'training-custom-wrap', calculateTraining);
+        setupDistancePresets('splits-presets', 'splits-custom-wrap', calculateSplits);
+
+        // 全入力を保存対象に
+        PERSIST_IDS.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', saveState);
+            if (el) el.addEventListener('change', saveState);
+        });
+
+        // ============ Init ============
         generateReferenceTable();
-        calculateFromPace();
-        calculateFromMarathon();
-        calculateFromTrack();
+        loadState();
+        applyUrlParams();
+        initMap();
+        recalcAll();
     </script>
 </body>
 </html>

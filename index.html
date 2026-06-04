@@ -554,6 +554,7 @@
             white-space: nowrap;
         }
         .vdot-display {
+            position: relative;
             margin-top: 22px;
             text-align: center;
             padding: 22px;
@@ -575,6 +576,72 @@
             color: #fff;
             letter-spacing: 0.01em;
             line-height: 1;
+        }
+
+        /* ===== Info toggle / panel (VDOT解説など) ===== */
+        .info-toggle {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.18);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s var(--ease);
+        }
+        .info-toggle:hover { background: rgba(255, 255, 255, 0.32); }
+        .info-toggle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        .info-toggle .material-symbols-rounded { font-size: 19px; }
+        .info-panel-wrap {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.35s var(--ease);
+        }
+        .info-panel-wrap.show { grid-template-rows: 1fr; margin-top: 12px; }
+        .info-panel-inner { overflow: hidden; }
+        .info-panel {
+            background: var(--inset);
+            border: 1px solid var(--border-soft);
+            border-left: 4px solid var(--c-purple);
+            border-radius: var(--radius-sm);
+            padding: 16px 18px;
+            font-size: 0.82rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .info-panel h4 {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+        .info-panel b { color: var(--text); font-weight: 700; }
+        .info-legend { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
+        .info-legend-item { display: flex; gap: 9px; align-items: baseline; }
+        .info-key {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 0.82rem;
+            color: #fff;
+            background: var(--ik-color, var(--c-purple));
+            border-radius: 5px;
+            min-width: 22px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            padding: 0 5px;
         }
 
         /* ===== Tables (splits / reference) ===== */
@@ -739,6 +806,47 @@
         .privacy-note .material-symbols-rounded { font-size: 19px; color: var(--c-green); flex-shrink: 0; }
 
         .empty-hint { text-align: center; color: var(--text-tertiary); font-size: 0.85rem; padding: 22px; font-weight: 500; }
+
+        /* ===== コース: 道なりルート設定（APIキー） ===== */
+        .course-route-mode { margin-top: 14px; }
+        .route-key-row { display: flex; gap: 8px; align-items: stretch; }
+        .route-key-row .input-select { flex: 1; }
+        .route-hint {
+            margin-top: 9px;
+            font-size: 0.74rem;
+            line-height: 1.5;
+            color: var(--text-tertiary);
+            display: flex;
+            gap: 7px;
+            font-weight: 500;
+        }
+        .route-hint .material-symbols-rounded { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+        .route-hint a { color: var(--accent); font-weight: 700; text-decoration: none; }
+        .route-hint a:hover { text-decoration: underline; }
+        .route-hint b { color: var(--text); font-weight: 700; }
+        .route-hint.ok { color: var(--c-green); }
+        .route-hint.ok .material-symbols-rounded { color: var(--c-green); }
+        .route-hint.error { color: var(--c-red); }
+        .route-hint.error .material-symbols-rounded { color: var(--c-red); }
+        .course-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 22px;
+            color: var(--text-tertiary);
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .course-spinner {
+            width: 18px;
+            height: 18px;
+            border: 2.5px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: course-spin 0.8s linear infinite;
+        }
+        @keyframes course-spin { to { transform: rotate(360deg); } }
 
         /* ===== Footer ===== */
         footer { text-align: center; padding: 32px 20px; color: var(--text-tertiary); font-size: 0.78rem; line-height: 1.7; font-weight: 500; }
@@ -1092,8 +1200,27 @@
             </div>
 
             <div class="vdot-display">
+                <button class="info-toggle" type="button" id="vdot-info-toggle" aria-expanded="false" aria-controls="vdot-info" aria-label="VDOTの説明を表示">
+                    <span class="material-symbols-rounded">info</span>
+                </button>
                 <div class="result-label">推定 VDOT</div>
                 <div class="result-value" id="vdot-value">--</div>
+            </div>
+
+            <div class="info-panel-wrap" id="vdot-info">
+                <div class="info-panel-inner">
+                    <div class="info-panel">
+                        <h4>VDOTとは？</h4>
+                        ジャック・ダニエルズ博士『ランニング・フォーミュラ』の指標で、レース結果から推定する走力（最大酸素摂取量＝VO₂maxに相当）です。数値が大きいほど走力が高く、この値をもとに各練習の最適ペースを逆算しています。
+                        <div class="info-legend">
+                            <div class="info-legend-item"><span class="info-key" style="--ik-color:#22C55E;">E</span><span><b>イージー</b> — 回復・土台づくり。会話できる楽なペース。</span></div>
+                            <div class="info-legend-item"><span class="info-key" style="--ik-color:#3B82F6;">M</span><span><b>マラソン</b> — フルマラソンのレースペース。</span></div>
+                            <div class="info-legend-item"><span class="info-key" style="--ik-color:#FF9F1C;">T</span><span><b>閾値走</b> — 「ややきつい」を20〜40分維持する強度。</span></div>
+                            <div class="info-legend-item"><span class="info-key" style="--ik-color:#FF6B35;">I</span><span><b>インターバル</b> — VO₂max向上。3〜5分の疾走を繰り返す。</span></div>
+                            <div class="info-legend-item"><span class="info-key" style="--ik-color:#EF4444;">R</span><span><b>レペティション</b> — スピード・フォーム改善。短い距離を速く。</span></div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="training-zones" id="training-zones"></div>
@@ -1181,6 +1308,17 @@
                         現在地
                     </button>
                 </div>
+                <div class="course-route-mode">
+                    <label class="field-label" for="route-key">道なりルート用 APIキー（GraphHopper・無料）</label>
+                    <div class="route-key-row">
+                        <input class="input-select" type="password" id="route-key" placeholder="未設定（簡易ループを表示）" autocomplete="off" spellcheck="false" style="text-align:left;">
+                        <button class="action-btn" id="route-key-save" type="button" style="flex:0 0 auto; padding:12px 18px;">保存</button>
+                    </div>
+                    <div class="route-hint" id="route-status">
+                        <span class="material-symbols-rounded">info</span>
+                        <span>キー未設定のため<b>簡易ループ（道なりではありません）</b>を表示中。</span>
+                    </div>
+                </div>
             </div>
 
             <div id="map"></div>
@@ -1195,7 +1333,7 @@
 
             <div class="privacy-note">
                 <span class="material-symbols-rounded">verified_user</span>
-                <span>あなたの位置情報は端末内だけで処理されます。サーバーへの送信・保存・共有は一切行いません。コース案も端末内で計算しています（地図の表示にOpenStreetMapのタイル画像のみ取得します）。コース案は道路に厳密には沿わない概算ルートです。</span>
+                <span>地図タイルはOpenStreetMapから取得します。<b>道なりルート用APIキーを設定した場合のみ</b>、起点の座標がルート生成のためGraphHopperへ送信されます（キーは端末内にのみ保存）。キー未設定時はすべて端末内で計算し、位置情報の外部送信は行いません。コース案は目安です。実際の交通規則・安全はご自身で確認してください。</span>
             </div>
         </div>
     </div>
@@ -1606,28 +1744,120 @@
             generateCourses();
         }
 
-        function generateCourses() {
+        // ============ 道なりルート（GraphHopper round_trip）連携 ============
+        const ROUTE_KEY_STORAGE = 'pace-calc:v1:gh-key';
+        const ROUTE_SEEDS = [1, 7, 13, 21];
+        let courseGenToken = 0;
+
+        function getRouteKey() {
+            try { return (localStorage.getItem(ROUTE_KEY_STORAGE) || '').trim(); } catch (e) { return ''; }
+        }
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function setRouteStatus(state, detail) {
+            const el = document.getElementById('route-status');
+            if (!el) return;
+            el.classList.remove('ok', 'error');
+            const signup = '<a href="https://www.graphhopper.com/" target="_blank" rel="noopener noreferrer">無料キーを取得</a>';
+            if (state === 'ok') {
+                el.classList.add('ok');
+                el.innerHTML = '<span class="material-symbols-rounded">check_circle</span><span>道なりの周回ルートを表示中（GraphHopper）。</span>';
+            } else if (state === 'ready') {
+                el.classList.add('ok');
+                el.innerHTML = '<span class="material-symbols-rounded">check_circle</span><span>道なりルート有効（APIキー設定済み）。起点を設定すると周回ルートを生成します。</span>';
+            } else if (state === 'error') {
+                el.classList.add('error');
+                const m = detail ? '（' + escapeHtml(String(detail.message || detail)) + '）' : '';
+                el.innerHTML = '<span class="material-symbols-rounded">error</span><span>ルート取得に失敗' + m + '。APIキーや通信状況をご確認ください。 ' + signup + '</span>';
+            } else { // nokey
+                el.innerHTML = '<span class="material-symbols-rounded">info</span><span>キー未設定のため<b>簡易ループ（道なりではありません）</b>を表示中。' + signup + 'して貼り付けると道なりの周回ルートになります。</span>';
+            }
+        }
+
+        // GraphHopper round_trip: 起点から指定距離(m)の道なり周回ルートを1本取得
+        async function roadRouteLoop(lat, lng, meters, seed, key) {
+            const url = 'https://graphhopper.com/api/1/route'
+                + '?point=' + lat + ',' + lng
+                + '&profile=foot&algorithm=round_trip'
+                + '&round_trip.distance=' + Math.round(meters)
+                + '&round_trip.seed=' + seed
+                + '&points_encoded=false&ch.disable=true'
+                + '&key=' + encodeURIComponent(key);
+            const res = await fetch(url);
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                const msg = (data && data.message) ? data.message : ('HTTP ' + res.status);
+                const err = new Error(msg); err.status = res.status; throw err;
+            }
+            const path = data && data.paths && data.paths[0];
+            if (!path || !path.points || !path.points.coordinates) throw new Error('ルートが見つかりません');
+            const pts = path.points.coordinates.map(c => [c[1], c[0]]); // [lng,lat] → [lat,lng]
+            const distKm = (path.distance || 0) / 1000;
+            return { pts, distKm };
+        }
+
+        async function generateCourses() {
             if (!courseStart) return;
-            const map = window._map;
+            const { lat, lng } = courseStart;
             const targetKm = parseFloat(document.getElementById('course-distance').value) || 10;
+            const optionsEl = document.getElementById('course-options');
+            const key = getRouteKey();
+            const myToken = ++courseGenToken;
+
+            if (!key) {
+                // フォールバック: 端末内の簡易ループ（道なりではない）
+                renderCourseList([
+                    { name: '周回 北回り（簡易）', pts: makeLoop(lat, lng, targetKm, 0) },
+                    { name: '周回 東回り（簡易）', pts: makeLoop(lat, lng, targetKm, 120) },
+                    { name: '周回 西回り（簡易）', pts: makeLoop(lat, lng, targetKm, 240) },
+                    { name: '往復 北（簡易）', pts: makeOutAndBack(lat, lng, targetKm, 0) },
+                ], true);
+                setRouteStatus('nokey');
+                return;
+            }
+
+            // GraphHopper で道なり周回ルートを複数生成
+            optionsEl.innerHTML = '<div class="course-loading"><span class="course-spinner"></span>道なりルートを生成中…</div>';
+            const results = [];
+            let lastErr = null;
+            for (let i = 0; i < ROUTE_SEEDS.length; i++) {
+                try {
+                    const r = await roadRouteLoop(lat, lng, targetKm * 1000, ROUTE_SEEDS[i], key);
+                    if (myToken !== courseGenToken) return; // 競合した古い生成は破棄
+                    results.push({ name: '道なり周回コース ' + (i + 1), pts: r.pts, distKm: r.distKm });
+                } catch (e) {
+                    if (myToken !== courseGenToken) return;
+                    lastErr = e;
+                    if (e.status === 401 || e.status === 403) break; // キー不正は即中断
+                }
+            }
+            if (myToken !== courseGenToken) return;
+            if (!results.length) {
+                optionsEl.innerHTML = '<div class="empty-hint">ルートを取得できませんでした' + (lastErr ? '（' + escapeHtml(String(lastErr.message || lastErr)) + '）' : '') + '。</div>';
+                setRouteStatus('error', lastErr);
+                return;
+            }
+            renderCourseList(results, false);
+            setRouteStatus('ok');
+        }
+
+        // ルート一覧（ポリライン描画＋カード生成）。簡易/道なり共通
+        function renderCourseList(list, isFallback) {
+            const map = window._map;
+            const optionsEl = document.getElementById('course-options');
             coursePolylines.forEach(p => map.removeLayer(p));
             coursePolylines = [];
-
-            const { lat, lng } = courseStart;
-            const candidates = [
-                { name: '周回コース 北回り', pts: makeLoop(lat, lng, targetKm, 0) },
-                { name: '周回コース 東回り', pts: makeLoop(lat, lng, targetKm, 120) },
-                { name: '周回コース 西回り', pts: makeLoop(lat, lng, targetKm, 240) },
-                { name: '往復コース（北）', pts: makeOutAndBack(lat, lng, targetKm, 0) },
-            ];
-
-            const optionsEl = document.getElementById('course-options');
             optionsEl.innerHTML = '';
+            if (!list || !list.length) {
+                optionsEl.innerHTML = '<div class="empty-hint">コース案が生成できませんでした</div>';
+                return;
+            }
+            if (activeCourseIdx >= list.length) activeCourseIdx = 0;
             const allBounds = [];
-
-            candidates.forEach((c, idx) => {
+            list.forEach((c, idx) => {
                 const color = COURSE_COLORS[idx % COURSE_COLORS.length];
-                const dist = polylineLength(c.pts);
+                const dist = (c.distKm != null) ? c.distKm : polylineLength(c.pts);
                 const line = L.polyline(c.pts, { color, weight: 5, opacity: idx === activeCourseIdx ? 0.9 : 0.25 });
                 line.addTo(map);
                 coursePolylines.push(line);
@@ -1639,8 +1869,8 @@
                 card.innerHTML = `
                     <div class="course-swatch"></div>
                     <div class="course-meta">
-                        <div class="course-name">${c.name}</div>
-                        <div class="course-dist">概算 ${dist.toFixed(2)} km</div>
+                        <div class="course-name">${escapeHtml(c.name)}</div>
+                        <div class="course-dist">${isFallback ? '概算' : '実測'} ${dist.toFixed(2)} km</div>
                     </div>
                     <span class="material-symbols-rounded course-toggle-icon">${idx === activeCourseIdx ? 'visibility' : 'visibility_off'}</span>`;
                 card.addEventListener('click', () => selectCourse(idx));
@@ -1798,8 +2028,41 @@
             }
         }
 
+        // ============ VDOT 解説トグル ============
+        function setupVdotInfo() {
+            const btn = document.getElementById('vdot-info-toggle');
+            const wrap = document.getElementById('vdot-info');
+            if (!btn || !wrap) return;
+            btn.addEventListener('click', () => {
+                const open = wrap.classList.toggle('show');
+                btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+        }
+
+        // ============ コース: 道なりルート APIキー設定 ============
+        function setupRouteKey() {
+            const input = document.getElementById('route-key');
+            const saveBtn = document.getElementById('route-key-save');
+            if (!input || !saveBtn) return;
+            const existing = getRouteKey();
+            if (existing) input.value = existing;
+            setRouteStatus(existing ? 'ready' : 'nokey');
+            saveBtn.addEventListener('click', () => {
+                const v = input.value.trim();
+                try {
+                    if (v) localStorage.setItem(ROUTE_KEY_STORAGE, v);
+                    else localStorage.removeItem(ROUTE_KEY_STORAGE);
+                } catch (e) { /* 不可環境は無視 */ }
+                setRouteStatus(v ? 'ready' : 'nokey');
+                if (courseStart) generateCourses();
+            });
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveBtn.click(); });
+        }
+
         // ============ Init ============
         setupThemeToggle();
+        setupVdotInfo();
+        setupRouteKey();
         generateReferenceTable();
         loadState();
         applyUrlParams();

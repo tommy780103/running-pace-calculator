@@ -1346,10 +1346,6 @@
                         <span>キー未設定のため<b>簡易ループ（道なりではありません）</b>を表示中。</span>
                     </div>
                     <div class="route-opts">
-                        <label class="route-check">
-                            <input type="checkbox" id="route-avoid-main">
-                            <span>大通りを避ける（走りやすい道を優先）</span>
-                        </label>
                         <button class="action-btn" id="route-regen" type="button" disabled>
                             <span class="material-symbols-rounded">refresh</span>
                             別の案を生成
@@ -1781,7 +1777,7 @@
             generateCourses();
         }
 
-        // ============ 道なりルート（GraphHopper round_trip）連携 ============
+        // ============ 道なりルート（GraphHopper 経由地ループ・無料プラン可）連携 ============
         const ROUTE_KEY_STORAGE = 'pace-calc:v1:gh-key';
         const ROUTE_SEEDS = [1, 7, 13, 21];
         let courseGenToken = 0;
@@ -1813,58 +1809,34 @@
             }
         }
 
-        // 連続生成用シード（「別の案を生成」で更新）
-        let currentSeeds = ROUTE_SEEDS.slice();
-        function randomSeeds(n) {
-            const s = [];
-            for (let i = 0; i < n; i++) s.push(Math.floor(Math.random() * 100000));
-            return s;
-        }
-        function routeAvoidMain() {
-            const cb = document.getElementById('route-avoid-main');
-            return !!(cb && cb.checked);
+        // 生成パターン（円の中心方向 offset）。「別の案を生成」でランダム化
+        let currentOffsets = [0, 90, 180, 270];
+        function randomOffsets(n) {
+            const base = Math.random() * 360;
+            const out = [];
+            for (let i = 0; i < n; i++) out.push((base + i * (360 / n)) % 360);
+            return out;
         }
         function updateRegenBtn() {
             const btn = document.getElementById('route-regen');
             if (btn) btn.disabled = !(courseStart && getRouteKey());
         }
-        // 大通りを避ける custom_model（POST専用・flexible）
-        const AVOID_MAIN_MODEL = { priority: [
-            { if: 'road_class == MOTORWAY', multiply_by: 0 },
-            { if: 'road_class == TRUNK', multiply_by: 0.15 },
-            { if: 'road_class == PRIMARY', multiply_by: 0.3 },
-            { if: 'road_class == SECONDARY', multiply_by: 0.5 }
-        ] };
 
-        // GraphHopper round_trip: 起点から指定距離(m)の道なり周回ルートを1本取得
-        // avoidMain=true は custom_model 付き POST（大通り回避）、false は GET
-        async function roadRouteLoop(lat, lng, meters, seed, key, avoidMain) {
-            let res;
-            if (avoidMain) {
-                res = await fetch('https://graphhopper.com/api/1/route?key=' + encodeURIComponent(key), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        profile: 'foot',
-                        points: [[lng, lat]],
-                        points_encoded: false,
-                        'ch.disable': true,
-                        algorithm: 'round_trip',
-                        'round_trip.distance': Math.round(meters),
-                        'round_trip.seed': seed,
-                        custom_model: AVOID_MAIN_MODEL
-                    })
-                });
-            } else {
-                const url = 'https://graphhopper.com/api/1/route'
-                    + '?point=' + lat + ',' + lng
-                    + '&profile=foot&algorithm=round_trip'
-                    + '&round_trip.distance=' + Math.round(meters)
-                    + '&round_trip.seed=' + seed
-                    + '&points_encoded=false&ch.disable=true'
-                    + '&key=' + encodeURIComponent(key);
-                res = await fetch(url);
-            }
+        // 起点を通る円周上に経由地を分散させ「道なり周回ループ」の経由地列を作る。
+        // 道なり迂回で距離が伸びるぶん、幾何円は少し小さめ(SCALE)に取る。
+        function loopWaypoints(lat, lng, targetKm, offsetDeg) {
+            const SCALE = 0.82;
+            const circle = makeLoop(lat, lng, targetKm * SCALE, offsetDeg); // [lat,lng]×49（先頭=末尾=起点）
+            const n = circle.length - 1;
+            const wps = [0.2, 0.4, 0.6, 0.8].map(f => circle[Math.round(n * f)]);
+            return [[lat, lng], ...wps, [lat, lng]];
+        }
+
+        // GraphHopper 標準ルーティング（CHモード・無料プラン可）で経由地を道なりに結ぶ
+        async function roadLoopRoute(waypoints, key) {
+            let url = 'https://graphhopper.com/api/1/route?profile=foot&points_encoded=false&key=' + encodeURIComponent(key);
+            waypoints.forEach(p => { url += '&point=' + p[0] + ',' + p[1]; });
+            const res = await fetch(url);
             const data = await res.json().catch(() => null);
             if (!res.ok) {
                 const msg = (data && data.message) ? data.message : ('HTTP ' + res.status);
@@ -1877,14 +1849,14 @@
             return { pts, distKm };
         }
 
-        async function generateCourses(seeds) {
+        async function generateCourses(offsets) {
             if (!courseStart) return;
             const { lat, lng } = courseStart;
             const targetKm = parseFloat(document.getElementById('course-distance').value) || 10;
             const optionsEl = document.getElementById('course-options');
             const key = getRouteKey();
             const myToken = ++courseGenToken;
-            const useSeeds = seeds || currentSeeds;
+            const useOffsets = offsets || currentOffsets;
 
             if (!key) {
                 // フォールバック: 端末内の簡易ループ（道なりではない）
@@ -1899,22 +1871,20 @@
                 return;
             }
 
-            // GraphHopper で道なり周回ルートを複数生成
+            // GraphHopper で道なり周回ルートを複数生成（経由地ループ方式・無料プラン可）
             optionsEl.innerHTML = '<div class="course-loading"><span class="course-spinner"></span>道なりルートを生成中…</div>';
             const results = [];
             let lastErr = null;
-            let avoid = routeAvoidMain();
-            let avoidFailed = false;
-            for (let i = 0; i < useSeeds.length; i++) {
+            for (let i = 0; i < useOffsets.length; i++) {
                 try {
-                    const r = await roadRouteLoop(lat, lng, targetKm * 1000, useSeeds[i], key, avoid);
+                    const wps = loopWaypoints(lat, lng, targetKm, useOffsets[i]);
+                    const r = await roadLoopRoute(wps, key);
                     if (myToken !== courseGenToken) return; // 競合した古い生成は破棄
                     results.push({ name: '道なり周回コース ' + (i + 1), pts: r.pts, distKm: r.distKm });
                 } catch (e) {
                     if (myToken !== courseGenToken) return;
                     lastErr = e;
                     if (e.status === 401 || e.status === 403) break; // キー不正は即中断
-                    if (avoid) { avoid = false; avoidFailed = true; i--; continue; } // 大通り回避不可→通常ルートで再試行
                 }
             }
             if (myToken !== courseGenToken) return;
@@ -1925,9 +1895,7 @@
                 return;
             }
             renderCourseList(results, false, targetKm);
-            if (avoidFailed) setRouteStatus('ok', '大通り回避は利用できず通常ルート');
-            else if (routeAvoidMain()) setRouteStatus('ok', '大通りを避けています');
-            else setRouteStatus('ok');
+            setRouteStatus('ok');
             updateRegenBtn();
         }
 
@@ -2155,20 +2123,12 @@
             });
             input.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveBtn.click(); });
 
-            // ルート生成オプション（大通り回避・別の案を生成）
-            const avoidCb = document.getElementById('route-avoid-main');
-            if (avoidCb) {
-                try { avoidCb.checked = localStorage.getItem('pace-calc:v1:avoid-main') === '1'; } catch (e) { /* 無視 */ }
-                avoidCb.addEventListener('change', () => {
-                    try { localStorage.setItem('pace-calc:v1:avoid-main', avoidCb.checked ? '1' : '0'); } catch (e) { /* 無視 */ }
-                    if (courseStart && getRouteKey()) generateCourses();
-                });
-            }
+            // ルート生成オプション（別の案を生成）
             const regenBtn = document.getElementById('route-regen');
             if (regenBtn) {
                 regenBtn.addEventListener('click', () => {
-                    currentSeeds = randomSeeds(4);
-                    generateCourses(currentSeeds);
+                    currentOffsets = randomOffsets(4);
+                    generateCourses(currentOffsets);
                 });
             }
             updateRegenBtn();

@@ -1963,8 +1963,15 @@
             }
             navigator.geolocation.getCurrentPosition(
                 (pos) => setCourseStart(pos.coords.latitude, pos.coords.longitude, true),
-                () => alert('現在地を取得できませんでした。地図をタップして起点を指定してください。\n（file://で開いている場合は取得できません）'),
-                { enableHighAccuracy: true, timeout: 8000 }
+                (err) => {
+                    let m;
+                    if (err.code === 1) m = '位置情報の利用が許可されていません。\nブラウザの許可、およびOSの位置情報サービス設定をご確認ください。';
+                    else if (err.code === 2) m = '現在地を特定できませんでした。\n（OSの位置情報サービスがオフ、または電波・Wi-Fiから位置を取得できない可能性）';
+                    else if (err.code === 3) m = '現在地の取得がタイムアウトしました。もう一度お試しください。';
+                    else m = '現在地を取得できませんでした。';
+                    alert(m + '\n\n地図をタップして起点を指定することもできます。\n（詳細: code=' + err.code + (err.message ? ' / ' + err.message : '') + '）');
+                },
+                { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
             );
         });
         document.getElementById('course-distance').addEventListener('input', () => { if (courseStart) generateCourses(); });

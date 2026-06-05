@@ -828,6 +828,33 @@
         .route-hint.ok .material-symbols-rounded { color: var(--c-green); }
         .route-hint.error { color: var(--c-red); }
         .route-hint.error .material-symbols-rounded { color: var(--c-red); }
+        .route-opts {
+            margin-top: 11px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .route-check {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+        .route-check input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        #route-regen { flex: 0 0 auto; padding: 10px 16px; }
+        #route-regen:disabled { opacity: 0.45; cursor: not-allowed; }
+        #route-regen:disabled:hover { background: var(--inset); color: var(--text); border-color: transparent; }
         .course-loading {
             display: flex;
             align-items: center;
@@ -1318,6 +1345,16 @@
                         <span class="material-symbols-rounded">info</span>
                         <span>キー未設定のため<b>簡易ループ（道なりではありません）</b>を表示中。</span>
                     </div>
+                    <div class="route-opts">
+                        <label class="route-check">
+                            <input type="checkbox" id="route-avoid-main">
+                            <span>大通りを避ける（走りやすい道を優先）</span>
+                        </label>
+                        <button class="action-btn" id="route-regen" type="button" disabled>
+                            <span class="material-symbols-rounded">refresh</span>
+                            別の案を生成
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1762,7 +1799,8 @@
             const signup = '<a href="https://www.graphhopper.com/" target="_blank" rel="noopener noreferrer">無料キーを取得</a>';
             if (state === 'ok') {
                 el.classList.add('ok');
-                el.innerHTML = '<span class="material-symbols-rounded">check_circle</span><span>道なりの周回ルートを表示中（GraphHopper）。</span>';
+                const note = detail ? ' <b>' + escapeHtml(String(detail.message || detail)) + '</b>' : '';
+                el.innerHTML = '<span class="material-symbols-rounded">check_circle</span><span>道なりの周回ルートを表示中（GraphHopper）。' + note + '</span>';
             } else if (state === 'ready') {
                 el.classList.add('ok');
                 el.innerHTML = '<span class="material-symbols-rounded">check_circle</span><span>道なりルート有効（APIキー設定済み）。起点を設定すると周回ルートを生成します。</span>';
@@ -1775,16 +1813,58 @@
             }
         }
 
+        // 連続生成用シード（「別の案を生成」で更新）
+        let currentSeeds = ROUTE_SEEDS.slice();
+        function randomSeeds(n) {
+            const s = [];
+            for (let i = 0; i < n; i++) s.push(Math.floor(Math.random() * 100000));
+            return s;
+        }
+        function routeAvoidMain() {
+            const cb = document.getElementById('route-avoid-main');
+            return !!(cb && cb.checked);
+        }
+        function updateRegenBtn() {
+            const btn = document.getElementById('route-regen');
+            if (btn) btn.disabled = !(courseStart && getRouteKey());
+        }
+        // 大通りを避ける custom_model（POST専用・flexible）
+        const AVOID_MAIN_MODEL = { priority: [
+            { if: 'road_class == MOTORWAY', multiply_by: 0 },
+            { if: 'road_class == TRUNK', multiply_by: 0.15 },
+            { if: 'road_class == PRIMARY', multiply_by: 0.3 },
+            { if: 'road_class == SECONDARY', multiply_by: 0.5 }
+        ] };
+
         // GraphHopper round_trip: 起点から指定距離(m)の道なり周回ルートを1本取得
-        async function roadRouteLoop(lat, lng, meters, seed, key) {
-            const url = 'https://graphhopper.com/api/1/route'
-                + '?point=' + lat + ',' + lng
-                + '&profile=foot&algorithm=round_trip'
-                + '&round_trip.distance=' + Math.round(meters)
-                + '&round_trip.seed=' + seed
-                + '&points_encoded=false&ch.disable=true'
-                + '&key=' + encodeURIComponent(key);
-            const res = await fetch(url);
+        // avoidMain=true は custom_model 付き POST（大通り回避）、false は GET
+        async function roadRouteLoop(lat, lng, meters, seed, key, avoidMain) {
+            let res;
+            if (avoidMain) {
+                res = await fetch('https://graphhopper.com/api/1/route?key=' + encodeURIComponent(key), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        profile: 'foot',
+                        points: [[lng, lat]],
+                        points_encoded: false,
+                        'ch.disable': true,
+                        algorithm: 'round_trip',
+                        'round_trip.distance': Math.round(meters),
+                        'round_trip.seed': seed,
+                        custom_model: AVOID_MAIN_MODEL
+                    })
+                });
+            } else {
+                const url = 'https://graphhopper.com/api/1/route'
+                    + '?point=' + lat + ',' + lng
+                    + '&profile=foot&algorithm=round_trip'
+                    + '&round_trip.distance=' + Math.round(meters)
+                    + '&round_trip.seed=' + seed
+                    + '&points_encoded=false&ch.disable=true'
+                    + '&key=' + encodeURIComponent(key);
+                res = await fetch(url);
+            }
             const data = await res.json().catch(() => null);
             if (!res.ok) {
                 const msg = (data && data.message) ? data.message : ('HTTP ' + res.status);
@@ -1797,13 +1877,14 @@
             return { pts, distKm };
         }
 
-        async function generateCourses() {
+        async function generateCourses(seeds) {
             if (!courseStart) return;
             const { lat, lng } = courseStart;
             const targetKm = parseFloat(document.getElementById('course-distance').value) || 10;
             const optionsEl = document.getElementById('course-options');
             const key = getRouteKey();
             const myToken = ++courseGenToken;
+            const useSeeds = seeds || currentSeeds;
 
             if (!key) {
                 // フォールバック: 端末内の簡易ループ（道なりではない）
@@ -1812,8 +1893,9 @@
                     { name: '周回 東回り（簡易）', pts: makeLoop(lat, lng, targetKm, 120) },
                     { name: '周回 西回り（簡易）', pts: makeLoop(lat, lng, targetKm, 240) },
                     { name: '往復 北（簡易）', pts: makeOutAndBack(lat, lng, targetKm, 0) },
-                ], true);
+                ], true, targetKm);
                 setRouteStatus('nokey');
+                updateRegenBtn();
                 return;
             }
 
@@ -1821,29 +1903,36 @@
             optionsEl.innerHTML = '<div class="course-loading"><span class="course-spinner"></span>道なりルートを生成中…</div>';
             const results = [];
             let lastErr = null;
-            for (let i = 0; i < ROUTE_SEEDS.length; i++) {
+            let avoid = routeAvoidMain();
+            let avoidFailed = false;
+            for (let i = 0; i < useSeeds.length; i++) {
                 try {
-                    const r = await roadRouteLoop(lat, lng, targetKm * 1000, ROUTE_SEEDS[i], key);
+                    const r = await roadRouteLoop(lat, lng, targetKm * 1000, useSeeds[i], key, avoid);
                     if (myToken !== courseGenToken) return; // 競合した古い生成は破棄
                     results.push({ name: '道なり周回コース ' + (i + 1), pts: r.pts, distKm: r.distKm });
                 } catch (e) {
                     if (myToken !== courseGenToken) return;
                     lastErr = e;
                     if (e.status === 401 || e.status === 403) break; // キー不正は即中断
+                    if (avoid) { avoid = false; avoidFailed = true; i--; continue; } // 大通り回避不可→通常ルートで再試行
                 }
             }
             if (myToken !== courseGenToken) return;
             if (!results.length) {
                 optionsEl.innerHTML = '<div class="empty-hint">ルートを取得できませんでした' + (lastErr ? '（' + escapeHtml(String(lastErr.message || lastErr)) + '）' : '') + '。</div>';
                 setRouteStatus('error', lastErr);
+                updateRegenBtn();
                 return;
             }
-            renderCourseList(results, false);
-            setRouteStatus('ok');
+            renderCourseList(results, false, targetKm);
+            if (avoidFailed) setRouteStatus('ok', '大通り回避は利用できず通常ルート');
+            else if (routeAvoidMain()) setRouteStatus('ok', '大通りを避けています');
+            else setRouteStatus('ok');
+            updateRegenBtn();
         }
 
         // ルート一覧（ポリライン描画＋カード生成）。簡易/道なり共通
-        function renderCourseList(list, isFallback) {
+        function renderCourseList(list, isFallback, targetKm) {
             const map = window._map;
             const optionsEl = document.getElementById('course-options');
             coursePolylines.forEach(p => map.removeLayer(p));
@@ -1858,6 +1947,14 @@
             list.forEach((c, idx) => {
                 const color = COURSE_COLORS[idx % COURSE_COLORS.length];
                 const dist = (c.distKm != null) ? c.distKm : polylineLength(c.pts);
+                let distLabel;
+                if (isFallback) {
+                    distLabel = '概算 ' + dist.toFixed(2) + ' km';
+                } else {
+                    const diff = (targetKm != null) ? (dist - targetKm) : null;
+                    const diffStr = (diff != null) ? '（目標比 ' + (diff >= 0 ? '+' : '') + diff.toFixed(2) + 'km）' : '';
+                    distLabel = '実測 ' + dist.toFixed(2) + ' km' + diffStr;
+                }
                 const line = L.polyline(c.pts, { color, weight: 5, opacity: idx === activeCourseIdx ? 0.9 : 0.25 });
                 line.addTo(map);
                 coursePolylines.push(line);
@@ -1870,7 +1967,7 @@
                     <div class="course-swatch"></div>
                     <div class="course-meta">
                         <div class="course-name">${escapeHtml(c.name)}</div>
-                        <div class="course-dist">${isFallback ? '概算' : '実測'} ${dist.toFixed(2)} km</div>
+                        <div class="course-dist">${distLabel}</div>
                     </div>
                     <span class="material-symbols-rounded course-toggle-icon">${idx === activeCourseIdx ? 'visibility' : 'visibility_off'}</span>`;
                 card.addEventListener('click', () => selectCourse(idx));
@@ -2057,6 +2154,24 @@
                 if (courseStart) generateCourses();
             });
             input.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveBtn.click(); });
+
+            // ルート生成オプション（大通り回避・別の案を生成）
+            const avoidCb = document.getElementById('route-avoid-main');
+            if (avoidCb) {
+                try { avoidCb.checked = localStorage.getItem('pace-calc:v1:avoid-main') === '1'; } catch (e) { /* 無視 */ }
+                avoidCb.addEventListener('change', () => {
+                    try { localStorage.setItem('pace-calc:v1:avoid-main', avoidCb.checked ? '1' : '0'); } catch (e) { /* 無視 */ }
+                    if (courseStart && getRouteKey()) generateCourses();
+                });
+            }
+            const regenBtn = document.getElementById('route-regen');
+            if (regenBtn) {
+                regenBtn.addEventListener('click', () => {
+                    currentSeeds = randomSeeds(4);
+                    generateCourses(currentSeeds);
+                });
+            }
+            updateRegenBtn();
         }
 
         // ============ Init ============

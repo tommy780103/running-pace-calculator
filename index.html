@@ -1825,11 +1825,12 @@
         // 起点を通る円周上に経由地を分散させ「道なり周回ループ」の経由地列を作る。
         // 道なり迂回で距離が伸びるぶん、幾何円は少し小さめ(SCALE)に取る。
         function loopWaypoints(lat, lng, targetKm, offsetDeg) {
-            const SCALE = 0.82;
+            // GraphHopper無料プランは1リクエスト最大5点。起点×2＋経由地3点に収める。
+            const SCALE = 0.88;
             const circle = makeLoop(lat, lng, targetKm * SCALE, offsetDeg); // [lat,lng]×49（先頭=末尾=起点）
             const n = circle.length - 1;
-            const wps = [0.2, 0.4, 0.6, 0.8].map(f => circle[Math.round(n * f)]);
-            return [[lat, lng], ...wps, [lat, lng]];
+            const wps = [0.25, 0.5, 0.75].map(f => circle[Math.round(n * f)]);
+            return [[lat, lng], ...wps, [lat, lng]]; // 計5点（無料プラン上限）
         }
 
         // GraphHopper 標準ルーティング（CHモード・無料プラン可）で経由地を道なりに結ぶ

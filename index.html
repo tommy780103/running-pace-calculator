@@ -855,6 +855,7 @@
         #route-regen { flex: 0 0 auto; padding: 10px 16px; }
         #route-regen:disabled { opacity: 0.45; cursor: not-allowed; }
         #route-regen:disabled:hover { background: var(--inset); color: var(--text); border-color: transparent; }
+        .course-detail-row { margin-top: 12px; }
         .course-loading {
             display: flex;
             align-items: center;
@@ -1364,9 +1365,16 @@
                 <div class="empty-hint">起点を設定するとコース案が表示されます</div>
             </div>
 
+            <div class="course-detail-row" id="course-detail-row" style="display:none;">
+                <button class="action-btn" id="course-gmap-btn" type="button">
+                    <span class="material-symbols-rounded">open_in_new</span>
+                    選択中のコースをGoogleマップで開く
+                </button>
+            </div>
+
             <div class="privacy-note">
                 <span class="material-symbols-rounded">verified_user</span>
-                <span>地図タイルはOpenStreetMapから取得します。<b>道なりルート用APIキーを設定した場合のみ</b>、起点の座標がルート生成のためGraphHopperへ送信されます（キーは端末内にのみ保存）。キー未設定時はすべて端末内で計算し、位置情報の外部送信は行いません。コース案は目安です。実際の交通規則・安全はご自身で確認してください。</span>
+                <span>地図タイルはOpenStreetMapから取得します。<b>道なりルート用APIキーを設定した場合のみ</b>、起点の座標がルート生成のためGraphHopperへ送信されます（キーは端末内にのみ保存）。キー未設定時はすべて端末内で計算し、位置情報の外部送信は行いません。「Googleマップで開く」を押した場合のみ、ルート座標がGoogleへ送られます。コース案は目安です。実際の交通規則・安全はご自身で確認してください。</span>
             </div>
         </div>
     </div>
@@ -1811,6 +1819,29 @@
 
         // 生成パターン（円の中心方向 offset）。「別の案を生成」でランダム化
         let currentOffsets = [0, 90, 180, 270];
+        let lastCourses = [];           // 直近に表示したコース一覧（詳細表示用）
+
+        // 選択中コースを Google マップの徒歩ルートとして開くURLを作る
+        function buildGoogleMapsLoopUrl(pts) {
+            if (!pts || pts.length < 2) return null;
+            const fmt = p => p[0].toFixed(6) + ',' + p[1].toFixed(6);
+            const start = pts[0], end = pts[pts.length - 1];
+            const inner = pts.slice(1, -1);
+            const N = Math.min(8, inner.length); // Googleマップの経由地上限に配慮
+            const wps = [];
+            for (let k = 1; k <= N; k++) wps.push(inner[Math.floor(inner.length * k / (N + 1))]);
+            return 'https://www.google.com/maps/dir/?api=1&travelmode=walking'
+                + '&origin=' + fmt(start)
+                + '&destination=' + fmt(end)
+                + (wps.length ? '&waypoints=' + wps.map(fmt).join('|') : '');
+        }
+        function openCourseInGoogleMaps() {
+            const c = lastCourses[activeCourseIdx];
+            if (!c || !c.pts) return;
+            const url = buildGoogleMapsLoopUrl(c.pts);
+            if (url) window.open(url, '_blank', 'noopener');
+        }
+
         function randomOffsets(n) {
             const base = Math.random() * 360;
             const out = [];
@@ -1902,6 +1933,9 @@
 
         // ルート一覧（ポリライン描画＋カード生成）。簡易/道なり共通
         function renderCourseList(list, isFallback, targetKm) {
+            lastCourses = list || [];
+            const detailRow = document.getElementById('course-detail-row');
+            if (detailRow) detailRow.style.display = (list && list.length) ? 'flex' : 'none';
             const map = window._map;
             const optionsEl = document.getElementById('course-options');
             coursePolylines.forEach(p => map.removeLayer(p));
@@ -2139,6 +2173,8 @@
                     generateCourses(currentOffsets);
                 });
             }
+            const gmapBtn = document.getElementById('course-gmap-btn');
+            if (gmapBtn) gmapBtn.addEventListener('click', openCourseInGoogleMaps);
             updateRegenBtn();
         }
 

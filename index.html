@@ -771,14 +771,15 @@
         .race-card.today .race-count .num { color: var(--c-red); }
         .race-count .unit { font-size: 0.68rem; color: var(--text-tertiary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-top: 2px; }
         .race-del {
-            width: 36px; height: 36px; border-radius: 10px; border: none;
+            width: 40px; height: 40px; border-radius: 10px; border: none;
             background: transparent; color: var(--text-tertiary); cursor: pointer;
             display: flex; align-items: center; justify-content: center; flex-shrink: 0;
             transition: background 0.2s var(--ease), color 0.2s var(--ease);
         }
         .race-del:hover { background: rgba(239, 68, 68, 0.12); color: var(--c-red); }
+        .race-del:active { background: rgba(239, 68, 68, 0.2); }
         .race-del:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-        .race-del .material-symbols-rounded { font-size: 20px; }
+        .race-del .material-symbols-rounded { font-size: 22px; }
 
         /* ===== Tables (splits / reference) ===== */
         .splits-wrap {
@@ -1035,12 +1036,22 @@
             .splits-table th, .splits-table td,
             .reference-table th, .reference-table td { padding: 9px 6px; font-size: 0.95rem; }
             .zone-pace { font-size: 1.25rem; }
+            /* 大会タブ: 追加フォームを縦積みにして押しやすく */
+            .race-add-row > div { flex-basis: 100%; }
+            .race-add-row #race-add-btn { width: 100%; justify-content: center; }
+            .race-count .num { font-size: 1.9rem; }
+            /* 練習タブ: 曜日行・メニューの微調整 */
+            .day-row { padding: 9px 12px; }
+            .day-name { font-size: 1rem; }
+            .menu-card { padding: 13px 14px; }
         }
         @media (max-width: 380px) {
             .logo-text h1 { font-size: 1.35rem; }
             .subtitle { font-size: 0.7rem; }
-            .tab-btn { padding: 8px 1px; font-size: 0.64rem; gap: 2px; }
+            .tab-btn { padding: 8px 1px; font-size: 0.62rem; gap: 2px; }
+            .tab-btn .material-symbols-rounded { font-size: 19px; }
             .result-box .result-value { font-size: 1.3rem; }
+            .day-time input { width: 64px; font-size: 1.05rem; }
         }
 
         @media (prefers-reduced-motion: reduce) {

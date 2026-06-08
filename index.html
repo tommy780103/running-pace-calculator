@@ -727,6 +727,59 @@
         .menu-pace { font-size: 0.78rem; color: var(--text-tertiary); margin-top: 4px; font-weight: 600; }
         .menu-pace b { color: var(--menu-color, var(--accent)); font-weight: 700; }
 
+        /* ===== 大会カウントダウン（大会タブ） ===== */
+        .race-add-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+        .race-add-row > div { flex: 1; min-width: 130px; }
+        .race-add-row input[type="text"], .race-add-row input[type="date"] {
+            width: 100%;
+            padding: 13px 14px;
+            background: var(--inset);
+            border: 2px solid transparent;
+            border-radius: 14px;
+            color: var(--text);
+            font-family: var(--font-body);
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .race-add-row input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+        #race-add-btn { flex: 0 0 auto; }
+        .race-list { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        .race-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 18px;
+            background: var(--inset);
+            border-radius: var(--radius-sm);
+            border-left: 4px solid var(--accent);
+        }
+        .race-card.soon { border-left-color: var(--cta); background: var(--cta-soft); }
+        .race-card.today { border-left-color: var(--c-red); background: rgba(239, 68, 68, 0.1); }
+        .race-card.past { opacity: 0.55; border-left-color: var(--text-tertiary); }
+        .race-info { flex: 1; min-width: 0; }
+        .race-name { font-weight: 700; font-size: 1.05rem; letter-spacing: -0.01em; word-break: break-word; }
+        .race-date { font-size: 0.78rem; color: var(--text-tertiary); margin-top: 3px; font-weight: 600; }
+        .race-count { text-align: right; flex-shrink: 0; line-height: 1; }
+        .race-count .num {
+            font-family: var(--font-num);
+            font-size: 2.1rem;
+            font-weight: 800;
+            line-height: 1;
+            color: var(--accent);
+        }
+        .race-card.soon .race-count .num { color: var(--cta-hover); }
+        .race-card.today .race-count .num { color: var(--c-red); }
+        .race-count .unit { font-size: 0.68rem; color: var(--text-tertiary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-top: 2px; }
+        .race-del {
+            width: 36px; height: 36px; border-radius: 10px; border: none;
+            background: transparent; color: var(--text-tertiary); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            transition: background 0.2s var(--ease), color 0.2s var(--ease);
+        }
+        .race-del:hover { background: rgba(239, 68, 68, 0.12); color: var(--c-red); }
+        .race-del:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .race-del .material-symbols-rounded { font-size: 20px; }
+
         /* ===== Tables (splits / reference) ===== */
         .splits-wrap {
             margin-top: 20px;
@@ -1051,6 +1104,10 @@
                 <span class="material-symbols-rounded">route</span>
                 <span>コース</span>
             </button>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="card-races" data-tab="card-races">
+                <span class="material-symbols-rounded">event</span>
+                <span>大会</span>
+            </button>
         </nav>
 
         <!-- ============ Card: 換算 ============ -->
@@ -1299,28 +1356,6 @@
                     </div>
                 </div>
 
-                <div class="vdot-display" style="margin-top:18px;">
-                    <button class="info-toggle" type="button" id="vdot-info-toggle" aria-expanded="false" aria-controls="vdot-info" aria-label="VDOTの説明を表示">
-                        <span class="material-symbols-rounded">info</span>
-                    </button>
-                    <div class="result-label">この目標タイムの推定 VDOT</div>
-                    <div class="result-value" id="vdot-value">--</div>
-                </div>
-                <div class="info-panel-wrap" id="vdot-info">
-                    <div class="info-panel-inner">
-                        <div class="info-panel">
-                            <h4>VDOTとは？</h4>
-                            ジャック・ダニエルズ博士『ランニング・フォーミュラ』の指標で、目標タイムから推定する走力（最大酸素摂取量＝VO₂maxに相当）です。この値をもとに各練習の最適ペースを逆算してメニューを作成しています。
-                            <div class="info-legend">
-                                <div class="info-legend-item"><span class="info-key" style="--ik-color:#22C55E;">E</span><span><b>イージー / ロング</b> — 回復・土台づくり。会話できる楽なペース。</span></div>
-                                <div class="info-legend-item"><span class="info-key" style="--ik-color:#3B82F6;">M</span><span><b>マラソン</b> — フルマラソンのレースペース。</span></div>
-                                <div class="info-legend-item"><span class="info-key" style="--ik-color:#FF9F1C;">T</span><span><b>閾値走</b> — 「ややきつい」を20〜40分維持する強度。</span></div>
-                                <div class="info-legend-item"><span class="info-key" style="--ik-color:#FF6B35;">I</span><span><b>インターバル</b> — VO₂max向上。3〜5分の疾走を繰り返す。</span></div>
-                                <div class="info-legend-item"><span class="info-key" style="--ik-color:#EF4444;">R</span><span><b>レペティション</b> — スピード・フォーム改善。短い距離を速く。</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- 週の練習できる時間 -->
@@ -1496,6 +1531,43 @@
                 <span>地図タイルはOpenStreetMapから取得します。<b>道なりルート用APIキーを設定した場合のみ</b>、起点の座標がルート生成のためGraphHopperへ送信されます（キーは端末内にのみ保存）。キー未設定時はすべて端末内で計算し、位置情報の外部送信は行いません。「Googleマップで開く」を押した場合のみ、ルート座標がGoogleへ送られます。コース案は目安です。実際の交通規則・安全はご自身で確認してください。</span>
             </div>
         </div>
+
+        <!-- ============ Card: 大会 ============ -->
+        <div class="card" id="card-races" role="tabpanel">
+            <div class="card-header">
+                <div class="card-icon blue">
+                    <span class="material-symbols-rounded">event</span>
+                </div>
+                <div>
+                    <div class="card-title">大会カウントダウン</div>
+                    <div class="card-subtitle">目標の大会日を登録して本番までの日数を表示</div>
+                </div>
+            </div>
+
+            <div class="race-add">
+                <div class="race-add-row">
+                    <div>
+                        <label class="field-label" for="race-name">大会名</label>
+                        <input type="text" id="race-name" placeholder="例: 東京マラソン" maxlength="50" autocomplete="off">
+                    </div>
+                    <div>
+                        <label class="field-label" for="race-date">開催日</label>
+                        <input type="date" id="race-date">
+                    </div>
+                    <button class="action-btn" id="race-add-btn" type="button">
+                        <span class="material-symbols-rounded">add</span>
+                        追加
+                    </button>
+                </div>
+            </div>
+
+            <div class="race-list" id="race-list"></div>
+
+            <div class="privacy-note" style="margin-top:20px;">
+                <span class="material-symbols-rounded">verified_user</span>
+                <span>登録した大会名と日付は<b>この端末内（ブラウザ）にのみ保存</b>され、外部送信や共有リンクには含まれません。</span>
+            </div>
+        </div>
     </div>
 
     <footer>
@@ -1576,6 +1648,8 @@
             if (targetId === 'card-course' && window._map) {
                 setTimeout(() => window._map.invalidateSize(), 100);
             }
+            // 大会タブを開いたらカウントダウンを再計算（日付跨ぎ対応）
+            if (targetId === 'card-races') renderRaces();
         }
 
         tabBtns.forEach(btn => {
@@ -1868,12 +1942,10 @@
             }
 
             if (vdot <= 0) {
-                setText('vdot-value', '--');
                 summaryEl.style.display = 'none';
                 menuEl.innerHTML = '<div class="empty-hint">目標フルマラソンタイムを入力してください</div>';
                 return;
             }
-            setText('vdot-value', vdot.toFixed(1));
 
             if (!days.length) {
                 summaryEl.style.display = 'none';
@@ -1923,7 +1995,7 @@
                 + `<span>練習時間 <b>約${(totalMin / 60).toFixed(1)}時間</b></span>`
                 + `<span>質練習 <b>${qCount}回</b></span>`;
 
-            lastMenuText = `【週間練習メニュー（目標フル ${secondsToHMS(goalSec)} / VDOT ${vdot.toFixed(1)}）】\n`
+            lastMenuText = `【週間練習メニュー（目標フル ${secondsToHMS(goalSec)}）】\n`
                 + `週${days.length}回・合計約${totalKm.toFixed(1)}km\n` + lines.join('\n');
         }
 
@@ -2424,17 +2496,6 @@
             }
         }
 
-        // ============ VDOT 解説トグル ============
-        function setupVdotInfo() {
-            const btn = document.getElementById('vdot-info-toggle');
-            const wrap = document.getElementById('vdot-info');
-            if (!btn || !wrap) return;
-            btn.addEventListener('click', () => {
-                const open = wrap.classList.toggle('show');
-                btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-            });
-        }
-
         // ============ コース: 道なりルート APIキー設定 ============
         function setupRouteKey() {
             const input = document.getElementById('route-key');
@@ -2467,10 +2528,105 @@
             updateRegenBtn();
         }
 
+        // ============ 大会カウントダウン（複数登録可・端末内のみ保存） ============
+        const RACES_STORAGE = STORAGE_PREFIX + 'races';
+        let races = [];
+
+        function loadRaces() {
+            try {
+                const raw = localStorage.getItem(RACES_STORAGE);
+                races = raw ? JSON.parse(raw) : [];
+                if (!Array.isArray(races)) races = [];
+            } catch (e) { races = []; }
+        }
+        function saveRaces() {
+            try { localStorage.setItem(RACES_STORAGE, JSON.stringify(races)); } catch (e) { /* 無視 */ }
+        }
+        function startOfToday() {
+            const n = new Date();
+            return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+        }
+        function daysUntil(dateStr) {
+            const p = String(dateStr).split('-').map(Number);
+            const target = new Date(p[0], p[1] - 1, p[2]);
+            return Math.round((target - startOfToday()) / 86400000);
+        }
+        function formatRaceDate(dateStr) {
+            const p = String(dateStr).split('-').map(Number);
+            const d = new Date(p[0], p[1] - 1, p[2]);
+            const wd = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+            return `${p[0]}年${p[1]}月${p[2]}日（${wd}）`;
+        }
+        function renderRaces() {
+            const listEl = document.getElementById('race-list');
+            if (!listEl) return;
+            if (!races.length) {
+                listEl.innerHTML = '<div class="empty-hint">大会名と開催日を入力して「追加」を押してください</div>';
+                return;
+            }
+            const sorted = races.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+            listEl.innerHTML = '';
+            sorted.forEach(race => {
+                const d = daysUntil(race.date);
+                let cls = 'race-card', countHtml;
+                if (d > 0) {
+                    if (d <= 7) cls += ' soon';
+                    countHtml = `<div class="num">${d}</div><div class="unit">日後</div>`;
+                } else if (d === 0) {
+                    cls += ' today';
+                    countHtml = `<div class="num">本番</div><div class="unit">TODAY</div>`;
+                } else {
+                    cls += ' past';
+                    countHtml = `<div class="num">${Math.abs(d)}</div><div class="unit">日前・終了</div>`;
+                }
+                const card = document.createElement('div');
+                card.className = cls;
+                card.innerHTML =
+                    `<div class="race-info">`
+                    + `<div class="race-name">${escapeHtml(race.name)}</div>`
+                    + `<div class="race-date">${formatRaceDate(race.date)}</div></div>`
+                    + `<div class="race-count">${countHtml}</div>`
+                    + `<button class="race-del" type="button" aria-label="削除" data-id="${escapeHtml(race.id)}">`
+                    + `<span class="material-symbols-rounded">delete</span></button>`;
+                listEl.appendChild(card);
+            });
+            listEl.querySelectorAll('.race-del').forEach(btn => {
+                btn.addEventListener('click', () => removeRace(btn.dataset.id));
+            });
+        }
+        function addRace() {
+            const nameEl = document.getElementById('race-name');
+            const dateEl = document.getElementById('race-date');
+            const date = dateEl.value;
+            if (!date) { dateEl.focus(); return; }
+            const name = (nameEl.value || '').trim();
+            races.push({ id: 'r' + Date.now() + Math.floor(Math.random() * 1000), name: name || '大会', date });
+            saveRaces();
+            nameEl.value = '';
+            dateEl.value = '';
+            renderRaces();
+            nameEl.focus();
+        }
+        function removeRace(id) {
+            races = races.filter(r => r.id !== id);
+            saveRaces();
+            renderRaces();
+        }
+        function setupRaces() {
+            const addBtn = document.getElementById('race-add-btn');
+            const nameEl = document.getElementById('race-name');
+            const dateEl = document.getElementById('race-date');
+            if (addBtn) addBtn.addEventListener('click', addRace);
+            if (nameEl) nameEl.addEventListener('keydown', e => { if (e.key === 'Enter') addRace(); });
+            if (dateEl) dateEl.addEventListener('keydown', e => { if (e.key === 'Enter') addRace(); });
+            loadRaces();
+            renderRaces();
+        }
+
         // ============ Init ============
         setupThemeToggle();
-        setupVdotInfo();
         setupRouteKey();
+        setupRaces();
         generateReferenceTable();
         loadState();
         applyUrlParams();

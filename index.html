@@ -644,6 +644,89 @@
             padding: 0 5px;
         }
 
+        /* ===== 週間練習メニュー（練習タブ） ===== */
+        .week-grid { display: flex; flex-direction: column; gap: 8px; }
+        .day-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 9px 14px;
+            background: var(--inset);
+            border-radius: var(--radius-sm);
+            border: 2px solid transparent;
+            transition: opacity 0.2s var(--ease), border-color 0.2s var(--ease);
+        }
+        .day-row.off { opacity: 0.5; }
+        .day-toggle { display: flex; align-items: center; gap: 11px; cursor: pointer; }
+        .day-toggle input { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+        .day-name { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; min-width: 1.4em; }
+        .day-time { display: flex; align-items: center; gap: 6px; }
+        .day-time input {
+            width: 74px;
+            padding: 8px 10px;
+            background: var(--surface);
+            border: 2px solid transparent;
+            border-radius: 10px;
+            color: var(--text);
+            font-family: var(--font-num);
+            font-size: 1.15rem;
+            font-weight: 700;
+            text-align: center;
+        }
+        .day-time input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .day-time input:disabled { opacity: 0.35; }
+        .day-unit { font-size: 0.78rem; color: var(--text-tertiary); font-weight: 600; }
+
+        .week-summary {
+            margin-bottom: 14px;
+            padding: 12px 16px;
+            background: var(--accent-soft);
+            border-radius: var(--radius-sm);
+            font-size: 0.84rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 18px;
+        }
+        .week-summary b { color: var(--accent); font-family: var(--font-num); }
+        .week-menu { display: flex; flex-direction: column; gap: 8px; }
+        .menu-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 13px;
+            padding: 14px 16px;
+            background: var(--inset);
+            border-radius: var(--radius-sm);
+            border-left: 4px solid var(--menu-color, var(--accent));
+        }
+        .menu-card.rest { opacity: 0.62; border-left-color: var(--text-tertiary); }
+        .menu-day {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.15rem;
+            min-width: 1.5em;
+            flex-shrink: 0;
+            color: var(--menu-color, var(--accent));
+        }
+        .menu-body { flex: 1; min-width: 0; }
+        .menu-type { font-weight: 700; font-size: 0.98rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .menu-badge {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 0.78rem;
+            color: #fff;
+            background: var(--menu-color, var(--accent));
+            border-radius: 5px;
+            padding: 1px 7px;
+            flex-shrink: 0;
+        }
+        .menu-detail { font-size: 0.82rem; color: var(--text-secondary); margin-top: 5px; line-height: 1.55; font-weight: 500; }
+        .menu-detail b { color: var(--text); font-weight: 700; }
+        .menu-pace { font-size: 0.78rem; color: var(--text-tertiary); margin-top: 4px; font-weight: 600; }
+        .menu-pace b { color: var(--menu-color, var(--accent)); font-weight: 700; }
+
         /* ===== Tables (splits / reference) ===== */
         .splits-wrap {
             margin-top: 20px;
@@ -1196,62 +1279,98 @@
                 </div>
             </div>
 
-            <label class="field-label">基準レースの距離</label>
-            <div class="distance-presets" id="training-presets">
-                <button class="preset-btn" data-dist="5" type="button">5km</button>
-                <button class="preset-btn active" data-dist="10" type="button">10km</button>
-                <button class="preset-btn" data-dist="21.0975" type="button">ハーフ</button>
-                <button class="preset-btn" data-dist="42.195" type="button">フル</button>
-                <button class="preset-btn" data-dist="custom" type="button">任意</button>
-            </div>
-            <div class="custom-distance-wrap" id="training-custom-wrap" style="display:none;">
-                <label class="field-label" for="training-custom-dist">距離 (km)</label>
-                <input class="input-select" type="number" id="training-custom-dist" placeholder="例: 3" min="0.1" step="0.1" inputmode="decimal" style="text-align:left;">
-            </div>
-
-            <label class="field-label" style="margin-top:14px;">レースタイム</label>
-            <div class="input-group">
-                <div class="input-field">
-                    <label for="training-hour">時間</label>
-                    <input type="number" id="training-hour" placeholder="0" min="0" max="20" value="0" inputmode="numeric">
+            <!-- 目標フルマラソンタイム -->
+            <div class="sub-section">
+                <div class="sub-title"><span class="material-symbols-rounded">emoji_events</span>目標フルマラソンタイム</div>
+                <div class="input-group">
+                    <div class="input-field">
+                        <label for="tr-goal-hour">時間</label>
+                        <input type="number" id="tr-goal-hour" placeholder="4" min="2" max="10" value="4" inputmode="numeric">
+                    </div>
+                    <span class="separator">:</span>
+                    <div class="input-field">
+                        <label for="tr-goal-min">分</label>
+                        <input type="number" id="tr-goal-min" placeholder="00" min="0" max="59" value="0" inputmode="numeric">
+                    </div>
+                    <span class="separator">:</span>
+                    <div class="input-field">
+                        <label for="tr-goal-sec">秒</label>
+                        <input type="number" id="tr-goal-sec" placeholder="00" min="0" max="59" value="0" inputmode="numeric">
+                    </div>
                 </div>
-                <span class="separator">:</span>
-                <div class="input-field">
-                    <label for="training-min">分</label>
-                    <input type="number" id="training-min" placeholder="45" min="0" max="59" value="45" inputmode="numeric">
-                </div>
-                <span class="separator">:</span>
-                <div class="input-field">
-                    <label for="training-sec">秒</label>
-                    <input type="number" id="training-sec" placeholder="00" min="0" max="59" value="0" inputmode="numeric">
-                </div>
-            </div>
 
-            <div class="vdot-display">
-                <button class="info-toggle" type="button" id="vdot-info-toggle" aria-expanded="false" aria-controls="vdot-info" aria-label="VDOTの説明を表示">
-                    <span class="material-symbols-rounded">info</span>
-                </button>
-                <div class="result-label">推定 VDOT</div>
-                <div class="result-value" id="vdot-value">--</div>
-            </div>
-
-            <div class="info-panel-wrap" id="vdot-info">
-                <div class="info-panel-inner">
-                    <div class="info-panel">
-                        <h4>VDOTとは？</h4>
-                        ジャック・ダニエルズ博士『ランニング・フォーミュラ』の指標で、レース結果から推定する走力（最大酸素摂取量＝VO₂maxに相当）です。数値が大きいほど走力が高く、この値をもとに各練習の最適ペースを逆算しています。
-                        <div class="info-legend">
-                            <div class="info-legend-item"><span class="info-key" style="--ik-color:#22C55E;">E</span><span><b>イージー</b> — 回復・土台づくり。会話できる楽なペース。</span></div>
-                            <div class="info-legend-item"><span class="info-key" style="--ik-color:#3B82F6;">M</span><span><b>マラソン</b> — フルマラソンのレースペース。</span></div>
-                            <div class="info-legend-item"><span class="info-key" style="--ik-color:#FF9F1C;">T</span><span><b>閾値走</b> — 「ややきつい」を20〜40分維持する強度。</span></div>
-                            <div class="info-legend-item"><span class="info-key" style="--ik-color:#FF6B35;">I</span><span><b>インターバル</b> — VO₂max向上。3〜5分の疾走を繰り返す。</span></div>
-                            <div class="info-legend-item"><span class="info-key" style="--ik-color:#EF4444;">R</span><span><b>レペティション</b> — スピード・フォーム改善。短い距離を速く。</span></div>
+                <div class="vdot-display" style="margin-top:18px;">
+                    <button class="info-toggle" type="button" id="vdot-info-toggle" aria-expanded="false" aria-controls="vdot-info" aria-label="VDOTの説明を表示">
+                        <span class="material-symbols-rounded">info</span>
+                    </button>
+                    <div class="result-label">この目標タイムの推定 VDOT</div>
+                    <div class="result-value" id="vdot-value">--</div>
+                </div>
+                <div class="info-panel-wrap" id="vdot-info">
+                    <div class="info-panel-inner">
+                        <div class="info-panel">
+                            <h4>VDOTとは？</h4>
+                            ジャック・ダニエルズ博士『ランニング・フォーミュラ』の指標で、目標タイムから推定する走力（最大酸素摂取量＝VO₂maxに相当）です。この値をもとに各練習の最適ペースを逆算してメニューを作成しています。
+                            <div class="info-legend">
+                                <div class="info-legend-item"><span class="info-key" style="--ik-color:#22C55E;">E</span><span><b>イージー / ロング</b> — 回復・土台づくり。会話できる楽なペース。</span></div>
+                                <div class="info-legend-item"><span class="info-key" style="--ik-color:#3B82F6;">M</span><span><b>マラソン</b> — フルマラソンのレースペース。</span></div>
+                                <div class="info-legend-item"><span class="info-key" style="--ik-color:#FF9F1C;">T</span><span><b>閾値走</b> — 「ややきつい」を20〜40分維持する強度。</span></div>
+                                <div class="info-legend-item"><span class="info-key" style="--ik-color:#FF6B35;">I</span><span><b>インターバル</b> — VO₂max向上。3〜5分の疾走を繰り返す。</span></div>
+                                <div class="info-legend-item"><span class="info-key" style="--ik-color:#EF4444;">R</span><span><b>レペティション</b> — スピード・フォーム改善。短い距離を速く。</span></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="training-zones" id="training-zones"></div>
+            <!-- 週の練習できる時間 -->
+            <div class="sub-section">
+                <div class="sub-title"><span class="material-symbols-rounded">calendar_month</span>週の練習できる時間</div>
+                <div class="sub-desc">練習する曜日をオンにして、その日に走れる時間（分）を入力してください</div>
+                <div class="week-grid" id="week-grid">
+                    <div class="day-row" data-day="0">
+                        <label class="day-toggle"><input type="checkbox" id="tr-day-0-on" checked><span class="day-name">月</span></label>
+                        <div class="day-time"><input type="number" id="tr-day-0-min" value="40" min="0" max="600" step="5" inputmode="numeric"><span class="day-unit">分</span></div>
+                    </div>
+                    <div class="day-row" data-day="1">
+                        <label class="day-toggle"><input type="checkbox" id="tr-day-1-on" checked><span class="day-name">火</span></label>
+                        <div class="day-time"><input type="number" id="tr-day-1-min" value="50" min="0" max="600" step="5" inputmode="numeric"><span class="day-unit">分</span></div>
+                    </div>
+                    <div class="day-row" data-day="2">
+                        <label class="day-toggle"><input type="checkbox" id="tr-day-2-on"><span class="day-name">水</span></label>
+                        <div class="day-time"><input type="number" id="tr-day-2-min" value="40" min="0" max="600" step="5" inputmode="numeric"><span class="day-unit">分</span></div>
+                    </div>
+                    <div class="day-row" data-day="3">
+                        <label class="day-toggle"><input type="checkbox" id="tr-day-3-on" checked><span class="day-name">木</span></label>
+                        <div class="day-time"><input type="number" id="tr-day-3-min" value="50" min="0" max="600" step="5" inputmode="numeric"><span class="day-unit">分</span></div>
+                    </div>
+                    <div class="day-row" data-day="4">
+                        <label class="day-toggle"><input type="checkbox" id="tr-day-4-on"><span class="day-name">金</span></label>
+                        <div class="day-time"><input type="number" id="tr-day-4-min" value="40" min="0" max="600" step="5" inputmode="numeric"><span class="day-unit">分</span></div>
+                    </div>
+                    <div class="day-row" data-day="5">
+                        <label class="day-toggle"><input type="checkbox" id="tr-day-5-on" checked><span class="day-name">土</span></label>
+                        <div class="day-time"><input type="number" id="tr-day-5-min" value="100" min="0" max="600" step="5" inputmode="numeric"><span class="day-unit">分</span></div>
+                    </div>
+                    <div class="day-row" data-day="6">
+                        <label class="day-toggle"><input type="checkbox" id="tr-day-6-on" checked><span class="day-name">日</span></label>
+                        <div class="day-time"><input type="number" id="tr-day-6-min" value="60" min="0" max="600" step="5" inputmode="numeric"><span class="day-unit">分</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 生成された週間メニュー -->
+            <div class="sub-section">
+                <div class="sub-title"><span class="material-symbols-rounded">list_alt</span>あなたの週間メニュー</div>
+                <div id="week-summary" class="week-summary" style="display:none;"></div>
+                <div class="week-menu" id="week-menu"></div>
+                <div class="btn-row">
+                    <button class="action-btn" id="menu-copy-btn" type="button">
+                        <span class="material-symbols-rounded">content_copy</span>
+                        <span id="menu-copy-label">メニューをコピー</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- ============ Card: スプリット ============ -->
@@ -1620,46 +1739,192 @@
             if (v <= 0) return 0;
             return 1000 / v * 60; // sec/km
         }
-        const TRAINING_ZONES = [
-            { key: 'E', name: 'Easy（イージー）', desc: 'ジョグ・回復走・LSD', pct: 0.70, range: [0.66, 0.74], color: '#22C55E' },
-            { key: 'M', name: 'Marathon（マラソン）', desc: 'マラソンレースペース', pct: 0.84, range: null, color: '#3B82F6' },
-            { key: 'T', name: 'Threshold（閾値走）', desc: 'テンポ走・LT向上', pct: 0.88, range: null, color: '#FF9F1C' },
-            { key: 'I', name: 'Interval（インターバル）', desc: 'VO2max向上・1000m〜', pct: 0.975, range: null, color: '#FF6B35' },
-            { key: 'R', name: 'Repetition（レペティション）', desc: 'スピード・200〜400m', pct: 1.05, range: null, color: '#EF4444' },
-        ];
+        // 各強度の目標%VO2max（E はレンジ表示用に上下も保持）
+        const ZONE_PCT = { E: 0.70, Efast: 0.74, Eslow: 0.66, M: 0.84, T: 0.88, I: 0.975, R: 1.05 };
+
+        // 練習種別の定義（フルマラソン向け）
+        const SESSION_DEF = {
+            LONG: { badge: 'L', name: 'ロング走',         color: '#3B82F6', zone: 'E', desc: 'ゆっくり長く。スタミナの土台づくり。終始ラクに。' },
+            E:    { badge: 'E', name: 'イージージョグ',   color: '#22C55E', zone: 'E', desc: '回復と有酸素能力の維持。会話できる楽なペースで。' },
+            M:    { badge: 'M', name: 'マラソンペース走', color: '#3B82F6', zone: 'M', desc: '本番ペースに脚を慣らす重要練習。' },
+            T:    { badge: 'T', name: 'テンポ走（閾値走）', color: '#FF9F1C', zone: 'T', desc: '「ややきつい」を維持。粘りの脚をつくる。' },
+            I:    { badge: 'I', name: 'インターバル',     color: '#FF6B35', zone: 'I', desc: 'VO₂max向上。疾走と休息を繰り返す。' },
+            R:    { badge: 'R', name: 'レペティション',   color: '#EF4444', zone: 'R', desc: 'スピードとフォーム改善。短く速く。' },
+        };
+        // 練習回数別の構成（質練習は週2〜3回まで、残りはイージー）
+        const WEEK_TEMPLATE = {
+            1: ['LONG'],
+            2: ['LONG', 'T'],
+            3: ['LONG', 'T', 'E'],
+            4: ['LONG', 'T', 'I', 'E'],
+            5: ['LONG', 'T', 'I', 'M', 'E'],
+            6: ['LONG', 'T', 'I', 'M', 'E', 'E'],
+            7: ['LONG', 'T', 'I', 'M', 'E', 'E', 'E'],
+        };
+        const WEEKDAY_NAMES = ['月', '火', '水', '木', '金', '土', '日'];
+
+        function zonePace(vdot, zoneKey) { return vdotToPaceSecPerKm(vdot, ZONE_PCT[zoneKey]); }
+
+        // 1セッションの距離・本数・説明文を組み立てる
+        function buildSession(type, minutes, vdot) {
+            const def = SESSION_DEF[type];
+            const ePace = zonePace(vdot, 'E');                  // sec/km
+            const zPace = zonePace(vdot, def.zone);             // sec/km（その練習の主ペース）
+            const distFromMin = (m, paceSec) => (m * 60) / paceSec; // km
+            let detail, paceText, totalKm;
+
+            if (type === 'LONG' || type === 'E') {
+                totalKm = distFromMin(minutes, ePace);
+                const fast = zonePace(vdot, 'Efast'), slow = zonePace(vdot, 'Eslow');
+                paceText = `${secondsToMinSec(fast)}〜${secondsToMinSec(slow)}/km`;
+                detail = `${minutes}分 ＝ 約 <b>${totalKm.toFixed(1)}km</b> をイージーペースで`;
+            } else if (type === 'M') {
+                const wu = 10, cd = 5;
+                const mainMin = Math.max(minutes - wu - cd, Math.round(minutes * 0.6));
+                const mainKm = distFromMin(mainMin, zPace);
+                totalKm = distFromMin(wu + cd, ePace) + mainKm;
+                paceText = `${secondsToMinSec(zPace)}/km（マラソンペース）`;
+                detail = `W-up ${wu}分 ＋ <b>マラソンペース 約${mainKm.toFixed(1)}km</b> ＋ C-down ${cd}分`;
+            } else if (type === 'T') {
+                const wu = 12, cd = 8;
+                const mainMin = Math.max(minutes - wu - cd, Math.round(minutes * 0.45));
+                const mainKm = distFromMin(mainMin, zPace);
+                totalKm = distFromMin(wu + cd, ePace) + mainKm;
+                paceText = `${secondsToMinSec(zPace)}/km（閾値ペース）`;
+                detail = `W-up ${wu}分 ＋ <b>テンポ走 約${mainKm.toFixed(1)}km</b>（${mainMin}分前後）＋ C-down ${cd}分`;
+            } else if (type === 'I') {
+                const wu = 15, cd = 10;
+                const repSec = zPace;                       // 1000mあたりの秒数 ≒ 1本の疾走時間
+                const restSec = Math.round(repSec * 0.8);
+                const budgetSec = Math.max((minutes - wu - cd) * 60, repSec);
+                const reps = Math.max(1, Math.round(budgetSec / (repSec + restSec)));
+                totalKm = distFromMin(wu + cd, ePace) + reps * 1.0 * 1.5; // レストジョグ込み概算
+                paceText = `${secondsToMinSec(zPace)}/km（疾走）`;
+                detail = `W-up ${wu}分 ＋ <b>1000m × ${reps}本</b>（つなぎジョグ 約${(restSec / 60).toFixed(1)}分）＋ C-down ${cd}分`;
+            } else { // R
+                const wu = 12, cd = 8;
+                const repSec = zPace * 0.4;                 // 400m
+                const reps = Math.max(4, Math.min(12, Math.round(((minutes - wu - cd) * 60) / (repSec * 3))));
+                totalKm = distFromMin(wu + cd, ePace) + reps * 0.4 * 2;
+                paceText = `${secondsToMinSec(zPace)}/km（疾走）`;
+                detail = `W-up ${wu}分 ＋ <b>400m × ${reps}本</b>（しっかり休息）＋ C-down ${cd}分`;
+            }
+            return { type, def, minutes, totalKm, paceText, detail };
+        }
+
+        function cyclicDist(a, b) { const d = Math.abs(a - b); return Math.min(d, 7 - d); }
+
+        // 練習する曜日にセッション種別を割り当てる（ハード日が連続しないよう分散）
+        function assignSessions(days) {
+            const n = days.length;
+            const tpl = WEEK_TEMPLATE[n] || WEEK_TEMPLATE[7];
+            const longDay = days.reduce((a, b) => (b.min > a.min ? b : a), days[0]);
+            const quality = tpl.filter(t => t !== 'LONG' && t !== 'E'); // 質練習の配列
+            const assign = {};
+            assign[longDay.idx] = 'LONG';
+            const hard = new Set([longDay.idx]);
+            const others = days.filter(d => d.idx !== longDay.idx)
+                .sort((a, b) => cyclicDist(b.idx, longDay.idx) - cyclicDist(a.idx, longDay.idx));
+            let qi = 0;
+            // まず隣接ハードを避けて配置
+            for (const d of others) {
+                if (qi >= quality.length) break;
+                const prev = (d.idx + 6) % 7, next = (d.idx + 1) % 7;
+                if (hard.has(prev) || hard.has(next)) continue;
+                assign[d.idx] = quality[qi++];
+                hard.add(d.idx);
+            }
+            // 置き切れなかった質練習は空き日へ妥協配置
+            for (const d of others) {
+                if (qi >= quality.length) break;
+                if (assign[d.idx]) continue;
+                assign[d.idx] = quality[qi++];
+                hard.add(d.idx);
+            }
+            // 残りはイージー
+            days.forEach(d => { if (!assign[d.idx]) assign[d.idx] = 'E'; });
+            return assign;
+        }
+
+        let lastMenuText = '';
         function calculateTraining() {
-            const dist = getPresetDistance('training-presets', 'training-custom-dist');
-            const totalSec = val('training-hour') * 3600 + val('training-min') * 60 + val('training-sec');
-            const vdot = calcVdot(dist, totalSec);
-            const zonesEl = document.getElementById('training-zones');
+            const goalSec = val('tr-goal-hour') * 3600 + val('tr-goal-min') * 60 + val('tr-goal-sec');
+            const vdot = calcVdot(MARATHON_DISTANCE, goalSec);
+            const menuEl = document.getElementById('week-menu');
+            const summaryEl = document.getElementById('week-summary');
+            lastMenuText = '';
+
+            // 練習する曜日を収集し、入力UIの有効/無効も更新
+            const days = [];
+            for (let i = 0; i < 7; i++) {
+                const on = document.getElementById(`tr-day-${i}-on`);
+                const minEl = document.getElementById(`tr-day-${i}-min`);
+                const isOn = !!(on && on.checked);
+                if (minEl) minEl.disabled = !isOn;
+                const row = document.querySelector(`.day-row[data-day="${i}"]`);
+                if (row) row.classList.toggle('off', !isOn);
+                const m = parseInt(minEl ? minEl.value : '0', 10) || 0;
+                if (isOn && m > 0) days.push({ idx: i, min: m });
+            }
+
             if (vdot <= 0) {
                 setText('vdot-value', '--');
-                zonesEl.innerHTML = '<div class="empty-hint">距離とタイムを入力してください</div>';
+                summaryEl.style.display = 'none';
+                menuEl.innerHTML = '<div class="empty-hint">目標フルマラソンタイムを入力してください</div>';
                 return;
             }
             setText('vdot-value', vdot.toFixed(1));
-            zonesEl.innerHTML = '';
-            TRAINING_ZONES.forEach(z => {
-                let paceText;
-                if (z.range) {
-                    const slow = vdotToPaceSecPerKm(vdot, z.range[0]);
-                    const fast = vdotToPaceSecPerKm(vdot, z.range[1]);
-                    paceText = `${secondsToMinSec(fast)}〜${secondsToMinSec(slow)}`;
-                } else {
-                    paceText = secondsToMinSec(vdotToPaceSecPerKm(vdot, z.pct));
+
+            if (!days.length) {
+                summaryEl.style.display = 'none';
+                menuEl.innerHTML = '<div class="empty-hint">練習する曜日を1つ以上オンにして、時間を入力してください</div>';
+                return;
+            }
+
+            const assign = assignSessions(days);
+            const minByIdx = {};
+            days.forEach(d => { minByIdx[d.idx] = d.min; });
+
+            menuEl.innerHTML = '';
+            let totalKm = 0, totalMin = 0, qCount = 0;
+            const lines = ['曜日\t練習\t内容'];
+            for (let i = 0; i < 7; i++) {
+                const card = document.createElement('div');
+                if (assign[i] === undefined) {
+                    card.className = 'menu-card rest';
+                    card.innerHTML =
+                        `<div class="menu-day" style="color:var(--text-tertiary)">${WEEKDAY_NAMES[i]}</div>`
+                        + `<div class="menu-body"><div class="menu-type">休養日</div>`
+                        + `<div class="menu-detail">しっかり休んで回復を。</div></div>`;
+                    menuEl.appendChild(card);
+                    lines.push(`${WEEKDAY_NAMES[i]}\t休養\t-`);
+                    continue;
                 }
-                const row = document.createElement('div');
-                row.className = 'zone-row';
-                row.style.setProperty('--zone-color', z.color);
-                row.innerHTML = `
-                    <div class="zone-badge">${z.key}</div>
-                    <div class="zone-info">
-                        <div class="zone-name">${z.name}</div>
-                        <div class="zone-desc">${z.desc}</div>
-                    </div>
-                    <div class="zone-pace">${paceText}<span style="font-size:0.7rem;color:var(--text-muted);">/km</span></div>`;
-                zonesEl.appendChild(row);
-            });
+                const s = buildSession(assign[i], minByIdx[i], vdot);
+                totalKm += s.totalKm; totalMin += s.minutes;
+                if (['M', 'T', 'I', 'R'].includes(s.type)) qCount++;
+                card.className = 'menu-card';
+                card.style.setProperty('--menu-color', s.def.color);
+                card.innerHTML =
+                    `<div class="menu-day">${WEEKDAY_NAMES[i]}</div>`
+                    + `<div class="menu-body">`
+                    + `<div class="menu-type"><span class="menu-badge">${s.def.badge}</span>${s.def.name}`
+                    + `<span style="color:var(--text-tertiary);font-weight:600;font-size:0.8rem;">${s.minutes}分</span></div>`
+                    + `<div class="menu-detail">${s.detail}</div>`
+                    + `<div class="menu-pace">ペース: <b>${s.paceText}</b></div></div>`;
+                menuEl.appendChild(card);
+                lines.push(`${WEEKDAY_NAMES[i]}\t${s.def.name}\t${s.detail.replace(/<\/?b>/g, '')}`);
+            }
+
+            summaryEl.style.display = 'flex';
+            summaryEl.innerHTML =
+                `<span>週 <b>${days.length}回</b></span>`
+                + `<span>合計 <b>約${totalKm.toFixed(1)}km</b></span>`
+                + `<span>練習時間 <b>約${(totalMin / 60).toFixed(1)}時間</b></span>`
+                + `<span>質練習 <b>${qCount}回</b></span>`;
+
+            lastMenuText = `【週間練習メニュー（目標フル ${secondsToHMS(goalSec)} / VDOT ${vdot.toFixed(1)}）】\n`
+                + `週${days.length}回・合計約${totalKm.toFixed(1)}km\n` + lines.join('\n');
         }
 
         // ============ スプリット表 ============
@@ -2017,7 +2282,10 @@
             'track-distance','track-min','track-sec',
             'predict-hour','predict-min','predict-sec','predict-custom-dist',
             'goal-hour','goal-min','goal-sec','goal-custom-dist',
-            'training-hour','training-min','training-sec','training-custom-dist',
+            'tr-goal-hour','tr-goal-min','tr-goal-sec',
+            'tr-day-0-on','tr-day-0-min','tr-day-1-on','tr-day-1-min','tr-day-2-on','tr-day-2-min',
+            'tr-day-3-on','tr-day-3-min','tr-day-4-on','tr-day-4-min','tr-day-5-on','tr-day-5-min',
+            'tr-day-6-on','tr-day-6-min',
             'splits-pace-min','splits-pace-sec','splits-custom-dist',
             'course-distance'
         ];
@@ -2025,7 +2293,9 @@
             try {
                 PERSIST_IDS.forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) localStorage.setItem(STORAGE_PREFIX + id, el.value);
+                    if (!el) return;
+                    const v = (el.type === 'checkbox') ? (el.checked ? '1' : '0') : el.value;
+                    localStorage.setItem(STORAGE_PREFIX + id, v);
                 });
             } catch (e) { /* localStorage不可環境は無視 */ }
         }
@@ -2033,10 +2303,11 @@
             try {
                 PERSIST_IDS.forEach(id => {
                     const stored = localStorage.getItem(STORAGE_PREFIX + id);
-                    if (stored !== null) {
-                        const el = document.getElementById(id);
-                        if (el) el.value = stored;
-                    }
+                    if (stored === null) return;
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    if (el.type === 'checkbox') el.checked = (stored === '1');
+                    else el.value = stored;
                 });
             } catch (e) { /* 無視 */ }
         }
@@ -2051,7 +2322,9 @@
             if (active) params.set('tab', active.dataset.tab.replace('card-', ''));
             PERSIST_IDS.forEach(id => {
                 const el = document.getElementById(id);
-                if (el && el.value !== '') params.set(id, el.value);
+                if (!el) return;
+                if (el.type === 'checkbox') params.set(id, el.checked ? '1' : '0');
+                else if (el.value !== '') params.set(id, el.value);
             });
             return location.origin + location.pathname + '?' + params.toString();
         }
@@ -2059,10 +2332,11 @@
             const params = new URLSearchParams(location.search);
             if (![...params.keys()].length) return;
             PERSIST_IDS.forEach(id => {
-                if (params.has(id)) {
-                    const el = document.getElementById(id);
-                    if (el) el.value = params.get(id);
-                }
+                if (!params.has(id)) return;
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (el.type === 'checkbox') el.checked = (params.get(id) === '1');
+                else el.value = params.get(id);
             });
             const tab = params.get('tab');
             if (tab) activateTab('card-' + tab);
@@ -2098,14 +2372,29 @@
         // 予測
         ['predict-hour','predict-min','predict-sec','predict-custom-dist'].forEach(id => document.getElementById(id).addEventListener('input', calculatePredict));
         ['goal-hour','goal-min','goal-sec','goal-custom-dist'].forEach(id => document.getElementById(id).addEventListener('input', calculateGoal));
-        // 練習
-        ['training-hour','training-min','training-sec','training-custom-dist'].forEach(id => document.getElementById(id).addEventListener('input', calculateTraining));
+        // 練習（目標タイム＋曜日ごとの練習時間）
+        ['tr-goal-hour','tr-goal-min','tr-goal-sec'].forEach(id => document.getElementById(id).addEventListener('input', calculateTraining));
+        for (let i = 0; i < 7; i++) {
+            const on = document.getElementById(`tr-day-${i}-on`);
+            const min = document.getElementById(`tr-day-${i}-min`);
+            if (on) on.addEventListener('change', calculateTraining);
+            if (min) min.addEventListener('input', calculateTraining);
+        }
+        document.getElementById('menu-copy-btn').addEventListener('click', async () => {
+            if (!lastMenuText) return;
+            try {
+                await navigator.clipboard.writeText(lastMenuText);
+                setText('menu-copy-label', 'コピーしました！');
+            } catch (e) {
+                setText('menu-copy-label', 'コピーに失敗しました');
+            }
+            setTimeout(() => setText('menu-copy-label', 'メニューをコピー'), 2000);
+        });
         // スプリット
         ['splits-pace-min','splits-pace-sec','splits-custom-dist'].forEach(id => document.getElementById(id).addEventListener('input', calculateSplits));
 
         setupDistancePresets('predict-presets', 'predict-custom-wrap', calculatePredict);
         setupDistancePresets('goal-presets', 'goal-custom-wrap', calculateGoal);
-        setupDistancePresets('training-presets', 'training-custom-wrap', calculateTraining);
         setupDistancePresets('splits-presets', 'splits-custom-wrap', calculateSplits);
 
         // 全入力を保存対象に

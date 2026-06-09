@@ -1850,13 +1850,34 @@
 
         function zonePace(vdot, zoneKey) { return vdotToPaceSecPerKm(vdot, ZONE_PCT[zoneKey]); }
 
+        // インターバル系のバリエーション（曜日で切り替え）：短いインターバルやビルドアップも織り交ぜる
+        const I_VARIANTS = [
+            { key: 'I1000', badge: 'I', name: 'インターバル 1000m',   color: '#FF6B35', desc: 'VO₂max向上。1kmの疾走と休息を繰り返す。' },
+            { key: 'I400',  badge: 'R', name: 'インターバル 400m（短）', color: '#EF4444', desc: '短い疾走でスピードとフォームを磨く。' },
+            { key: 'I200',  badge: 'R', name: 'インターバル 200m（短）', color: '#EF4444', desc: '最大スピードを刺激。フォームを意識して。' },
+            { key: 'BU',    badge: 'B', name: 'ビルドアップ走',          color: '#A855F7', desc: '1kmごとに少しずつペースアップ。後半に粘る力をつける。' },
+        ];
+
+        // 練習時間が短いときは W-up / C-down を削る（30分以下はゼロ、それ以外も合計が全体の半分を超えないよう調整）
+        function trimWuCd(wu, cd, minutes) {
+            if (minutes <= 30) return [0, 0];
+            const cap = Math.floor(minutes * 0.5);
+            if (wu + cd <= cap) return [wu, cd];
+            const r = cap / (wu + cd);
+            return [Math.round(wu * r), Math.round(cd * r)];
+        }
+
+        // 本体の説明文に W-up / C-down を前後に付ける（0分なら省略）
+        function withWuCd(core, wu, cd) {
+            return (wu > 0 ? `W-up ${wu}分 ＋ ` : '') + core + (cd > 0 ? ` ＋ C-down ${cd}分` : '');
+        }
+
         // 1セッションの距離・本数・説明文を組み立てる
-        function buildSession(type, minutes, vdot) {
+        function buildSession(type, minutes, vdot, dayIdx = 0) {
             const def = SESSION_DEF[type];
             const ePace = zonePace(vdot, 'E');                  // sec/km
-            const zPace = zonePace(vdot, def.zone);             // sec/km（その練習の主ペース）
             const distFromMin = (m, paceSec) => (m * 60) / paceSec; // km
-            let detail, paceText, totalKm;
+            let displayDef = def, detail, paceText, totalKm;
 
             if (type === 'LONG' || type === 'E') {
                 totalKm = distFromMin(minutes, ePace);
@@ -1864,37 +1885,60 @@
                 paceText = `${secondsToMinSec(fast)}〜${secondsToMinSec(slow)}/km`;
                 detail = `${minutes}分 ＝ 約 <b>${totalKm.toFixed(1)}km</b> をイージーペースで`;
             } else if (type === 'M') {
-                const wu = 10, cd = 5;
+                const [wu, cd] = trimWuCd(10, 5, minutes);
+                const zPace = zonePace(vdot, def.zone);
                 const mainMin = Math.max(minutes - wu - cd, Math.round(minutes * 0.6));
                 const mainKm = distFromMin(mainMin, zPace);
                 totalKm = distFromMin(wu + cd, ePace) + mainKm;
                 paceText = `${secondsToMinSec(zPace)}/km（マラソンペース）`;
-                detail = `W-up ${wu}分 ＋ <b>マラソンペース 約${mainKm.toFixed(1)}km</b> ＋ C-down ${cd}分`;
+                detail = withWuCd(`<b>マラソンペース 約${mainKm.toFixed(1)}km</b>`, wu, cd);
             } else if (type === 'T') {
-                const wu = 12, cd = 8;
+                const [wu, cd] = trimWuCd(12, 8, minutes);
+                const zPace = zonePace(vdot, def.zone);
                 const mainMin = Math.max(minutes - wu - cd, Math.round(minutes * 0.45));
                 const mainKm = distFromMin(mainMin, zPace);
                 totalKm = distFromMin(wu + cd, ePace) + mainKm;
                 paceText = `${secondsToMinSec(zPace)}/km（閾値ペース）`;
-                detail = `W-up ${wu}分 ＋ <b>テンポ走 約${mainKm.toFixed(1)}km</b>（${mainMin}分前後）＋ C-down ${cd}分`;
+                detail = withWuCd(`<b>テンポ走 約${mainKm.toFixed(1)}km</b>（${mainMin}分前後）`, wu, cd);
             } else if (type === 'I') {
-                const wu = 15, cd = 10;
-                const repSec = zPace;                       // 1000mあたりの秒数 ≒ 1本の疾走時間
-                const restSec = Math.round(repSec * 0.8);
-                const budgetSec = Math.max((minutes - wu - cd) * 60, repSec);
-                const reps = Math.max(1, Math.round(budgetSec / (repSec + restSec)));
-                totalKm = distFromMin(wu + cd, ePace) + reps * 1.0 * 1.5; // レストジョグ込み概算
-                paceText = `${secondsToMinSec(zPace)}/km（疾走）`;
-                detail = `W-up ${wu}分 ＋ <b>1000m × ${reps}本</b>（つなぎジョグ 約${(restSec / 60).toFixed(1)}分）＋ C-down ${cd}分`;
+                const variant = I_VARIANTS[dayIdx % I_VARIANTS.length];
+                displayDef = variant;
+                if (variant.key === 'BU') {
+                    // ビルドアップ走：イージー→M→T へ 1kmごとにペースアップ
+                    const [wu, cd] = trimWuCd(10, 5, minutes);
+                    const mPace = zonePace(vdot, 'M'), tPace = zonePace(vdot, 'T');
+                    const mainMin = Math.max(minutes - wu - cd, Math.round(minutes * 0.7));
+                    const mainKm = distFromMin(mainMin, mPace);   // 平均はおおむねMペース
+                    totalKm = distFromMin(wu + cd, ePace) + mainKm;
+                    paceText = `${secondsToMinSec(ePace)} → ${secondsToMinSec(tPace)}/km`;
+                    detail = withWuCd(`<b>ビルドアップ 約${mainKm.toFixed(1)}km</b>（1kmごとにイージー→M→T へペースアップ）`, wu, cd);
+                } else {
+                    const [wu, cd] = trimWuCd(15, 10, minutes);
+                    const isLong = variant.key === 'I1000';
+                    const repKm = isLong ? 1.0 : (variant.key === 'I400' ? 0.4 : 0.2);
+                    const repPace = isLong ? zonePace(vdot, 'I') : zonePace(vdot, 'R'); // 短い本数は R ペース
+                    const repSec = repPace * repKm;
+                    const restSec = Math.round(repSec * (isLong ? 0.8 : 1.0));
+                    const budgetSec = Math.max((minutes - wu - cd) * 60, repSec);
+                    const minReps = isLong ? 1 : (variant.key === 'I400' ? 4 : 6);
+                    const reps = Math.max(minReps, Math.round(budgetSec / (repSec + restSec)));
+                    const jogKm = distFromMin(restSec / 60, ePace);
+                    totalKm = distFromMin(wu + cd, ePace) + reps * repKm + Math.max(0, reps - 1) * jogKm;
+                    paceText = `${secondsToMinSec(repPace)}/km（疾走）`;
+                    const repLabel = isLong ? '1000m' : (variant.key === 'I400' ? '400m' : '200m');
+                    const restLabel = restSec >= 60 ? `約${(restSec / 60).toFixed(1)}分` : `約${restSec}秒`;
+                    detail = withWuCd(`<b>${repLabel} × ${reps}本</b>（つなぎジョグ ${restLabel}）`, wu, cd);
+                }
             } else { // R
-                const wu = 12, cd = 8;
+                const [wu, cd] = trimWuCd(12, 8, minutes);
+                const zPace = zonePace(vdot, def.zone);
                 const repSec = zPace * 0.4;                 // 400m
                 const reps = Math.max(4, Math.min(12, Math.round(((minutes - wu - cd) * 60) / (repSec * 3))));
                 totalKm = distFromMin(wu + cd, ePace) + reps * 0.4 * 2;
                 paceText = `${secondsToMinSec(zPace)}/km（疾走）`;
-                detail = `W-up ${wu}分 ＋ <b>400m × ${reps}本</b>（しっかり休息）＋ C-down ${cd}分`;
+                detail = withWuCd(`<b>400m × ${reps}本</b>（しっかり休息）`, wu, cd);
             }
-            return { type, def, minutes, totalKm, paceText, detail };
+            return { type, def: displayDef, minutes, totalKm, paceText, detail };
         }
 
         function cyclicDist(a, b) { const d = Math.abs(a - b); return Math.min(d, 7 - d); }
@@ -1983,7 +2027,7 @@
                     lines.push(`${WEEKDAY_NAMES[i]}\t休養\t-`);
                     continue;
                 }
-                const s = buildSession(assign[i], minByIdx[i], vdot);
+                const s = buildSession(assign[i], minByIdx[i], vdot, i);
                 totalKm += s.totalKm; totalMin += s.minutes;
                 if (['M', 'T', 'I', 'R'].includes(s.type)) qCount++;
                 card.className = 'menu-card';

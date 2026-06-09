@@ -2171,6 +2171,45 @@
             return total;
         }
 
+        // 点p から線分 a-b（緯度経度）への垂線距離（メートル・局所平面近似）
+        function perpDistMeters(p, a, b) {
+            const mLat = 111320, mLng = 111320 * Math.cos(a[0] * Math.PI / 180);
+            const bx = (b[1] - a[1]) * mLng, by = (b[0] - a[0]) * mLat;
+            const px = (p[1] - a[1]) * mLng, py = (p[0] - a[0]) * mLat;
+            const len2 = bx * bx + by * by;
+            if (len2 === 0) return Math.hypot(px, py);
+            let t = (px * bx + py * by) / len2;
+            t = Math.max(0, Math.min(1, t));
+            return Math.hypot(px - t * bx, py - t * by);
+        }
+        // ルート形状を保ったまま“曲がり角”を優先して最大K個の経由点を抽出（優先度付きRDP）
+        function simplifyTopK(points, k) {
+            const n = points.length;
+            if (n <= 2 || k <= 0) return [points[0], points[n - 1]];
+            const keep = new Set([0, n - 1]);
+            const farthest = (a, b) => {           // 区間a-b内で最も外れた点
+                let idx = -1, max = -1;
+                for (let i = a + 1; i < b; i++) {
+                    const d = perpDistMeters(points[i], points[a], points[b]);
+                    if (d > max) { max = d; idx = i; }
+                }
+                return { a, b, idx, dist: max };
+            };
+            const segs = [];
+            const seed = farthest(0, n - 1);
+            if (seed.idx >= 0) segs.push(seed);
+            while (keep.size - 2 < k && segs.length) {
+                let bi = 0;                          // 最大ズレの区間を選ぶ
+                for (let i = 1; i < segs.length; i++) if (segs[i].dist > segs[bi].dist) bi = i;
+                const s = segs.splice(bi, 1)[0];
+                if (!s || s.idx < 0 || s.dist <= 0) break;
+                keep.add(s.idx);
+                const left = farthest(s.a, s.idx);   if (left.idx >= 0) segs.push(left);
+                const right = farthest(s.idx, s.b);  if (right.idx >= 0) segs.push(right);
+            }
+            return [...keep].sort((x, y) => x - y).map(i => points[i]);
+        }
+
         // 起点を通る円形ループ（多角形近似）。中心を起点から方位offsetDegにずらす
         function makeLoop(lat, lng, targetKm, offsetDeg) {
             const r = targetKm / (2 * Math.PI); // 半径km
@@ -2238,14 +2277,14 @@
         let lastCourses = [];           // 直近に表示したコース一覧（詳細表示用）
 
         // 選択中コースを Google マップの徒歩ルートとして開くURLを作る
+        // GoogleマップURLの経由地上限に配慮した最大数（origin/destinationは別枠）
+        const GMAPS_MAX_WAYPOINTS = 9;
         function buildGoogleMapsLoopUrl(pts) {
             if (!pts || pts.length < 2) return null;
             const fmt = p => p[0].toFixed(6) + ',' + p[1].toFixed(6);
             const start = pts[0], end = pts[pts.length - 1];
-            const inner = pts.slice(1, -1);
-            const N = Math.min(8, inner.length); // Googleマップの経由地上限に配慮
-            const wps = [];
-            for (let k = 1; k <= N; k++) wps.push(inner[Math.floor(inner.length * k / (N + 1))]);
+            // 等間隔ではなく“曲がり角”を優先して経由地を抽出（Googleが同じ道をなぞりやすい）
+            const wps = simplifyTopK(pts, GMAPS_MAX_WAYPOINTS).slice(1, -1); // 端点を除いた要点
             return 'https://www.google.com/maps/dir/?api=1&travelmode=walking'
                 + '&origin=' + fmt(start)
                 + '&destination=' + fmt(end)

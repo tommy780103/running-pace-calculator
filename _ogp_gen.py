@@ -91,7 +91,7 @@ print("saved ogp.png", img.size)
 
 # ---- ファビコン / apple-touch-icon（同デザインのストップウォッチ）----
 def make_icon(s):
-    # 角丸＋縦グラデーション背景
+    # 全面不透明の背景。ホーム画面の角丸はOSに任せる。
     grad = Image.new("RGB", (s, s))
     gp = grad.load()
     c0, c1 = (37, 99, 235), (29, 58, 140)
@@ -100,10 +100,7 @@ def make_icon(s):
         col = tuple(int(c0[i] + (c1[i]-c0[i])*t) for i in range(3))
         for xx in range(s):
             gp[xx, yy] = col
-    mask = Image.new("L", (s, s), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([0, 0, s-1, s-1], radius=int(s*0.22), fill=255)
-    im = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    im.paste(grad, (0, 0), mask)
+    im = grad.convert("RGB")
     d = ImageDraw.Draw(im)
     cx, cy, rr = s/2, s*0.56, s*0.25
     w = max(2, int(round(s*0.075)))
@@ -117,7 +114,7 @@ def make_icon(s):
     d.line([cx, cy, cx+rr*0.6, cy-rr*0.5], fill=(245, 158, 11, 255), width=w)
     return im
 
-make_icon(180).save("apple-touch-icon.png", "PNG")
-make_icon(48).resize((48, 48), Image.LANCZOS).save("favicon.png", "PNG")
-make_icon(512).resize((512, 512)).save("icon-512.png", "PNG")  # PWA等の予備
-print("saved favicon.png / apple-touch-icon.png / icon-512.png")
+for filename, size in [("apple-touch-icon.png", 180), ("icon-192.png", 192),
+                       ("favicon.png", 48), ("icon-512.png", 512)]:
+    make_icon(size * 4).resize((size, size), Image.Resampling.LANCZOS).save(filename, "PNG")
+print("saved favicon.png / apple-touch-icon.png / icon-192.png / icon-512.png")
